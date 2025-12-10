@@ -1,8 +1,11 @@
 # Technical Design Document - Skill Manager
 
+**Version:** 1.1 (MVP)
+**Last Updated:** 2025-12-10
+
 ## 1. Overview
 
-This document defines the technical implementation for Skill Manager - a centralized HTTP MCP service for managing AI skills.
+This document defines the technical implementation for Skill Manager - a centralized HTTP MCP service for managing AI skills. It maps to PRD requirement IDs F-001 (Skill Management), F-002 (File Management), F-003 (Version History), and F-004 (Web UI).
 
 **Stack:**
 - Runtime: Cloudflare Workers
@@ -369,11 +372,11 @@ Static API key via environment variable:
 const authMiddleware = (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.replace('Bearer ', '');
-  
+
   if (token !== c.env.MCP_API_KEY) {
     return c.json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Invalid API key' } }, 401);
   }
-  
+
   return next();
 };
 ```
@@ -446,3 +449,39 @@ throw new AppError('VALIDATION_ERROR', 'File content exceeds 200KB limit', 400);
 - [ ] Error messages
 - [ ] Loading states
 - [ ] Basic styling
+
+## 12. Testing Strategy
+
+- **Unit tests**
+  - Repositories and services for skills, versions, and files (F-001, F-002, F-003).
+  - Validation and error handling for key flows.
+
+- **Integration tests**
+  - MCP tools (`skill.create`, `skill.update`, `skill.list`, `skill.get`, `skill.get_file`) implementing F-001–F-003.
+  - REST API endpoints (`/api/skills`, `/api/skills/:id`, version/file routes) implementing F-001–F-003.
+
+- **End-to-end tests (optional for MVP)**
+  - Web UI flows for listing skills, viewing details and versions, and viewing files (F-004).
+
+## 13. Deployment & Operations
+
+- **Environments**
+  - Local development via Cloudflare Workers tooling.
+  - At least one deployed environment (e.g., `production`) on Cloudflare Workers + D1.
+
+- **Database migrations**
+  - Migrations applied to D1 before or during deploy, using a repeatable process (for example, Wrangler/D1 migrations).
+
+- **Logging & monitoring**
+  - Application logs for all error responses (including MCP and REST APIs).
+  - Basic request logging (status codes, latencies) for observability.
+
+- **Failures & recovery**
+  - In case of deployment rollback, schema changes should remain compatible with existing data where possible.
+
+## 14. Change History
+
+| Date       | Version | Description                                | Author |
+|------------|---------|--------------------------------------------|--------|
+| 2025-12-10 | 1.0     | Initial TDD draft                           | Human  |
+| 2025-12-10 | 1.1     | Added PRD mapping, testing, ops, change log | AI     |

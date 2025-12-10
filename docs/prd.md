@@ -2,8 +2,8 @@
 
 ## Overview
 
-**Product Name:** Skill Manager  
-**Version:** 1.0 (MVP)  
+**Product Name:** Skill Manager
+**Version:** 1.0 (MVP)
 **Last Updated:** 2025-12-10
 
 ## Problem Statement
@@ -41,7 +41,7 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 
 ## Features
 
-### 1. Skill Management
+### F-001. Skill Management
 
 **Description:** Create, read, update, and list skills with automatic versioning.
 
@@ -53,7 +53,7 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 - [ ] Each create/update automatically increments version number
 - [ ] Skill names must be unique
 
-### 2. File Management
+### F-002. File Management
 
 **Description:** Manage files within each skill version.
 
@@ -63,7 +63,7 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 - [ ] AI can retrieve individual file content via MCP `skill.get_file` tool
 - [ ] Each version stores a complete snapshot of all files
 
-### 3. Version History
+### F-003. Version History
 
 **Description:** Track all changes to skills over time.
 
@@ -74,7 +74,7 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 - [ ] Previous versions are preserved and accessible
 - [ ] No manual version number input allowed
 
-### 4. Web UI
+### F-004. Web UI
 
 **Description:** Browser interface for viewing and managing skills.
 
@@ -83,6 +83,28 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 - [ ] View skill details and version history
 - [ ] View file contents within a version
 - [ ] Toggle skill active/inactive status
+
+## Non-Functional Requirements
+
+- **Performance**
+  - MCP and REST API p95 latency: `< 500ms` for typical requests.
+  - Web UI main pages: time to interactive `< 2s` on common desktop connections.
+
+- **Availability & Reliability**
+  - Designed for single-tenant deployment on Cloudflare Workers with an expectation of high availability, but no hard SLOs in MVP.
+  - Version history must never be lost for committed versions.
+
+- **Security**
+  - All MCP and REST endpoints require API key authentication (see TDD for details).
+  - No sensitive tokens or secrets stored inside skill files.
+
+- **Observability**
+  - Log all failed MCP/REST requests with error codes and minimal context.
+  - Basic request logging for successful calls (status code, latency).
+
+- **Data Management**
+  - Skills, versions, and files persist in Cloudflare D1.
+  - No hard retention policy defined in MVP; data is kept indefinitely unless explicitly deleted.
 
 ## Success Metrics
 
@@ -112,3 +134,10 @@ AI agents (like Claude, ChatGPT) need a centralized way to create, store, and ma
 - [ ] Skill list page
 - [ ] Skill detail page with version history
 - [ ] File viewer
+
+## Change History
+
+| Date       | Version | Description                  | Author |
+|------------|---------|------------------------------|--------|
+| 2025-12-10 | 1.0     | Initial PRD draft            | Human  |
+| 2025-12-10 | 1.1     | Added IDs, NFRs, change log | AI     |
