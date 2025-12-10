@@ -124,15 +124,20 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'skill_get_file',
-    description: 'Get the content of a specific file from a skill by name',
+    description: 'Get the content of one or more files from a skill. Supports single path or multiple paths.',
     inputSchema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Name of the skill (e.g., "svelte5-expert")' },
-        path: { type: 'string', description: 'Path of the file (e.g., "SKILL.md" or "references/api.md")' },
+        path: { type: 'string', description: 'Single file path (e.g., "SKILL.md"). Use this OR paths, not both.' },
+        paths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Multiple file paths to retrieve at once (e.g., ["SKILL.md", "references/api.md"])',
+        },
         version: { type: 'number', description: 'Specific version number (defaults to latest)' },
       },
-      required: ['name', 'path'],
+      required: ['name'],
     },
   },
 ];
@@ -396,22 +401,61 @@ async function handleSkillGet(
 }
 
 /**
- * Handle skill_get_file tool
+ * Handle skill_get_file tool - supports single or multiple files
  */
 async function handleSkillGetFile(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
   const skillName = args.name as string;
-  const path = args.path as string;
   const version = args.version as number | undefined;
 
-  const file = await service.getFile(skillName, path, version);
-  return successResult({
-    path: file.path,
-    content: file.content,
-    is_executable: file.is_executable,
-    script_language: file.script_language,
-    run_instructions_for_ai: file.run_instructions_for_ai,
-  });
+  // Support both single path and multiple paths
+  const singlePath = args.path as string | undefined;
+  const multiplePaths = args.paths as string[] | undefined;
+
+  // Determine which paths to fetch
+  const pathsToFetch: string[] = [];
+  if (multiplePaths && Array.isArray(multiplePaths)) {
+    pathsToFetch.push(...multiplePaths);
+  } else if (singlePath) {
+    pathsToFetch.push(singlePath);
+  }
+
+  if (pathsToFetch.length === 0) {
+    return errorResult('Either "path" or "paths" is required');
+  }
+
+  // Fetch all files
+  const results = await Promise.all(
+    pathsToFetch.map(async (filePath) => {
+      try {
+        const file = await service.getFile(skillName, filePath, version);
+        return {
+          path: file.path,
+          content: file.content,
+          is_executable: file.is_executable,
+          script_language: file.script_language,
+          run_instructions_for_ai: file.run_instructions_for_ai,
+        };
+      } catch (error) {
+        return {
+          path: filePath,
+          error: error instanceof Error ? error.message : 'Failed to fetch file',
+        };
+      }
+    })
+  );
+
+  // Return single file format for backward compatibility when only one path requested
+  if (pathsToFetch.length === 1 && !multiplePaths) {
+    const result = results[0];
+    if ('error' in result) {
+      return errorResult(`NOT_FOUND: ${result.error}`);
+    }
+    return successResult(result);
+  }
+
+  // Return array format for multiple files
+  return successResult({ files: results });
 }
