@@ -1,0 +1,373 @@
+/**
+ * Skill Manager UI Styles
+ */
+
+/* Skill List */
+.skill-list {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.skill-list h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.skill-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.skill-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.skill-card:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.skill-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.skill-name {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.skill-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.skill-status.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.skill-status.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.skill-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.skill-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.75rem;
+}
+
+/* Loading skeleton */
+.skill-card.skeleton {
+  pointer-events: none;
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-line.title {
+  height: 1.2rem;
+  width: 60%;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-line.description {
+  height: 0.9rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-line.meta {
+  height: 0.8rem;
+  width: 40%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Error and empty states */
+.skill-list-error,
+.skill-list-empty {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.skill-list-error button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.skill-list-empty .hint {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+
+/* Skill Detail */
+.skill-detail {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+.back-button:hover {
+  text-decoration: underline;
+}
+
+.skill-metadata {
+  margin-bottom: 1.5rem;
+}
+
+.skill-metadata h2 {
+  display: inline;
+  margin-right: 1rem;
+}
+
+.skill-metadata .description {
+  color: #666;
+  margin: 0.75rem 0;
+}
+
+.skill-metadata .changelog {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.skill-metadata .version-info {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* Version selector */
+.version-selector {
+  margin-bottom: 1rem;
+}
+
+.version-selector label {
+  margin-right: 0.5rem;
+}
+
+.version-selector select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+/* Skill content layout */
+.skill-content {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 1rem;
+  min-height: 400px;
+}
+
+/* File list */
+.file-list {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.file-list h4 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.file-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.file-item:hover {
+  background: #e9ecef;
+}
+
+.file-item.selected {
+  background: #007bff;
+  color: white;
+}
+
+.file-item:focus {
+  outline: 2px solid #007bff;
+  outline-offset: -2px;
+}
+
+.file-icon {
+  margin-right: 0.5rem;
+}
+
+.file-path {
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+/* File viewer */
+.file-viewer {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.file-viewer.loading,
+.file-viewer.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #666;
+}
+
+.file-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.file-header .file-path {
+  font-weight: 500;
+  flex: 1;
+}
+
+.executable-badge,
+.language-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #e9ecef;
+}
+
+.executable-badge {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.run-instructions {
+  padding: 0.75rem 1rem;
+  background: #e7f3ff;
+  border-bottom: 1px solid #b8daff;
+  font-size: 0.9rem;
+}
+
+.run-instructions strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.file-content {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background: #fafafa;
+}
+
+.no-file-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #888;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+/* Loading states */
+.skill-detail-loading,
+.skill-detail-error {
+  text-align: center;
+  padding: 3rem;
+}
+
+.skill-detail-error button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .skill-content {
+    grid-template-columns: 1fr;
+  }
+
+  .file-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+}

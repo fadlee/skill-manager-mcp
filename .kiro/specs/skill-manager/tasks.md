@@ -1,0 +1,173 @@
+# Implementation Plan
+
+- [x] 1. Set up database and shared types
+  - [x] 1.1 Create D1 database migration with skills, skill_versions, and skill_files tables
+    - Create migration file with CREATE TABLE statements and indexes
+    - Configure wrangler.json with D1 binding
+    - _Requirements: 1.1, 2.1, 6.1_
+  - [x] 1.2 Create shared TypeScript types
+    - Define Skill, SkillVersion, SkillFile interfaces
+    - Define SkillWithVersion, SkillDetail composite types
+    - Define CreateSkillInput, UpdateSkillInput, FileInput, FileChange types
+    - _Requirements: 12.1, 12.2_
+  - [ ]* 1.3 Write property test for serialization round-trip
+    - **Property 18: Serialization round-trip**
+    - **Validates: Requirements 12.1, 12.2**
+
+- [x] 2. Implement repository layer
+  - [x] 2.1 Create skill repository with CRUD operations
+    - Implement createSkill, findSkillById, findSkillByName, listSkills, updateSkill
+    - Implement createVersion, findVersionsBySkillId, findVersion, getLatestVersionNumber
+    - Implement createFiles, findFilesByVersionId, findFile
+    - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1_
+  - [ ]* 2.2 Write unit tests for repository operations
+    - Test CRUD operations with mock D1
+    - Test edge cases for queries
+    - _Requirements: 1.1, 2.1, 3.1_
+
+- [x] 3. Implement validation and error handling
+  - [x] 3.1 Create validation module with constraint checking
+    - Implement validateCreateSkill, validateUpdateSkill, validateFile functions
+    - Define CONSTRAINTS constants (name max, description max, file size, etc.)
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+  - [x] 3.2 Create error handling utilities
+    - Implement AppError class with error codes
+    - Create factory functions (notFound, conflict, validationError, unauthorized, dbError)
+    - _Requirements: 1.2, 2.6, 4.4, 5.2, 8.1_
+  - [ ]* 3.3 Write property test for validation constraints
+    - **Property 17: Validation constraints enforced**
+    - **Validates: Requirements 9.1, 9.2, 9.3, 9.4, 9.5**
+
+- [x] 4. Implement service layer
+  - [x] 4.1 Create skill service with business logic
+    - Implement createSkill with version 1 creation
+    - Implement updateSkill with version increment and file change handling
+    - Implement listSkills with filtering, pagination, and search
+    - Implement getSkill with version selection (default to latest)
+    - Implement getFile with version selection
+    - Implement updateStatus for active flag
+    - _Requirements: 1.1, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.3, 7.1_
+  - [ ]* 4.2 Write property test for skill creation version 1
+    - **Property 1: Skill creation produces version 1**
+    - **Validates: Requirements 1.1**
+  - [ ]* 4.3 Write property test for duplicate name rejection
+    - **Property 2: Duplicate skill names rejected**
+    - **Validates: Requirements 1.2**
+  - [ ]* 4.4 Write property test for file content round-trip
+    - **Property 3: File content round-trip**
+    - **Validates: Requirements 1.3, 5.1**
+  - [ ]* 4.5 Write property test for version increment
+    - **Property 4: Version increment on update**
+    - **Validates: Requirements 2.1**
+  - [ ]* 4.6 Write property test for previous versions preserved
+    - **Property 5: Previous versions preserved**
+    - **Validates: Requirements 2.2**
+  - [ ]* 4.7 Write property test for file changes applied
+    - **Property 6: File changes applied correctly**
+    - **Validates: Requirements 2.3, 2.4, 2.5**
+  - [ ]* 4.8 Write property test for NOT_FOUND errors
+    - **Property 7: Non-existent resource returns NOT_FOUND**
+    - **Validates: Requirements 2.6, 4.4, 5.2**
+
+- [ ] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement authentication middleware
+  - [x] 6.1 Create auth middleware for API key validation
+    - Implement Bearer token extraction and validation
+    - Return 401 for missing or invalid tokens
+    - _Requirements: 8.1, 8.2_
+  - [ ]* 6.2 Write property test for authentication
+    - **Property 16: Authentication required**
+    - **Validates: Requirements 8.1, 8.2**
+
+- [x] 7. Implement MCP server
+  - [x] 7.1 Create MCP route handler with tool definitions
+    - Implement POST /mcp endpoint
+    - Define tool schemas for skill.create, skill.update, skill.list, skill.get, skill.get_file
+    - Implement JSON-RPC request/response handling
+    - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1_
+  - [x] 7.2 Implement MCP tool handlers
+    - Wire tool handlers to service layer
+    - Format responses according to MCP spec
+    - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 5.1_
+  - [ ]* 7.3 Write unit tests for MCP handlers
+    - Test each tool with valid inputs
+    - Test error responses
+    - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1_
+
+- [x] 8. Implement REST API
+  - [x] 8.1 Create REST API routes
+    - Implement GET /api/skills with pagination and search
+    - Implement GET /api/skills/:id
+    - Implement GET /api/skills/:id/versions
+    - Implement GET /api/skills/:id/versions/:version/files/*path
+    - Implement PATCH /api/skills/:id for status update
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 5.1, 6.1, 7.1_
+  - [ ]* 8.2 Write property tests for list operations
+    - **Property 8: List returns required fields**
+    - **Validates: Requirements 3.1**
+  - [ ]* 8.3 Write property test for active-only filtering
+    - **Property 9: Active-only filtering**
+    - **Validates: Requirements 3.2, 7.2**
+  - [ ]* 8.4 Write property test for pagination
+    - **Property 10: Pagination respects limits**
+    - **Validates: Requirements 3.3**
+  - [ ]* 8.5 Write property test for search
+    - **Property 11: Search filters by name**
+    - **Validates: Requirements 3.4**
+  - [ ]* 8.6 Write property test for default latest version
+    - **Property 12: Default to latest version**
+    - **Validates: Requirements 4.3, 5.3**
+  - [ ]* 8.7 Write property test for version ordering
+    - **Property 13: Versions ordered descending**
+    - **Validates: Requirements 6.2**
+  - [ ]* 8.8 Write property test for changelog persistence
+    - **Property 14: Changelog persisted**
+    - **Validates: Requirements 6.3**
+  - [ ]* 8.9 Write property test for status update
+    - **Property 15: Status update persists**
+    - **Validates: Requirements 7.1**
+
+- [ ] 9. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Implement Web UI - Skill List
+  - [x] 10.1 Create skill list page component
+    - Display skills with name, status, and latest version
+    - Implement navigation to skill detail page
+    - Add loading and error states
+    - _Requirements: 10.1, 10.2_
+  - [x] 10.2 Create API client hooks for skill list
+    - Implement useSkills hook with React Query or similar
+    - Handle pagination state
+    - _Requirements: 3.1, 10.1_
+
+- [x] 11. Implement Web UI - Skill Detail
+  - [x] 11.1 Create skill detail page component
+    - Display skill metadata (name, description, status)
+    - Display version history list
+    - Display file list for selected version
+    - _Requirements: 11.1, 11.2_
+  - [x] 11.2 Create file viewer component
+    - Display file content with syntax highlighting
+    - Handle file selection
+    - _Requirements: 11.3_
+  - [x] 11.3 Create API client hooks for skill detail
+    - Implement useSkill hook for skill details
+    - Implement useSkillVersions hook for version history
+    - Implement useSkillFile hook for file content
+    - _Requirements: 4.1, 5.1, 6.1, 11.1, 11.2, 11.3_
+
+- [x] 12. Wire up routing and main app
+  - [x] 12.1 Configure React Router for skill pages
+    - Set up routes for / (skill list), /skills/:id (skill detail)
+    - Add navigation components
+    - _Requirements: 10.2, 11.1_
+  - [x] 12.2 Update worker entry point with all routes
+    - Register MCP, API, and static file routes
+    - Apply auth middleware to protected routes
+    - _Requirements: 8.1, 8.2_
+
+- [ ] 13. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
