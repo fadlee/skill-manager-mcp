@@ -319,8 +319,10 @@ async function handleSkillUpdate(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
+  // Accept both 'name' (preferred) and 'skill_id' (legacy) for backward compatibility
+  const skillIdentifier = (args.name ?? args.skill_id) as string;
   const input: UpdateSkillInput = {
-    skill_id: args.name as string, // Use name as identifier
+    skill_id: skillIdentifier, // Service layer handles lookup by name or ID
     description: args.description as string | undefined,
     file_changes: args.file_changes as UpdateSkillInput['file_changes'],
     changelog: args.changelog as string | undefined,
