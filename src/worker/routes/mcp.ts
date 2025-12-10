@@ -42,26 +42,26 @@ interface ToolResult {
 const TOOL_DEFINITIONS = [
   {
     name: 'skill_create',
-    description: 'Create a new skill with files',
+    description: 'Create a new skill with files. IMPORTANT: Always include a SKILL.md file as the primary documentation. Put reference files (docs, examples, data) in references/ folder.',
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Unique name for the skill' },
-        description: { type: 'string', description: 'Description of the skill' },
+        name: { type: 'string', description: 'Unique name for the skill (kebab-case recommended)' },
+        description: { type: 'string', description: 'Brief description of the skill' },
         files: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              path: { type: 'string', description: 'File path within the skill' },
+              path: { type: 'string', description: 'File path. Use SKILL.md for main doc, references/ folder for reference files (e.g., references/api-docs.md)' },
               content: { type: 'string', description: 'File content' },
               is_executable: { type: 'boolean', description: 'Whether the file is executable' },
-              script_language: { type: 'string', description: 'Script language if executable' },
+              script_language: { type: 'string', description: 'Script language if executable (e.g., python, bash, javascript)' },
               run_instructions_for_ai: { type: 'string', description: 'Instructions for AI to run the script' },
             },
             required: ['path', 'content'],
           },
-          description: 'Files to include in the skill',
+          description: 'Files to include. Structure: SKILL.md (main doc), references/ (reference files), scripts/ (executable scripts).',
         },
         changelog: { type: 'string', description: 'Changelog for this version' },
       },
