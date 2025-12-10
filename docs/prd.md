@@ -1,251 +1,114 @@
-# 📄 **PRD — Skill-Manager MCP**
+# Product Requirements Document - Skill Manager
 
 ## Overview
 
-**Product Name:** Skill-Manager MCP
-**Purpose:** Satu layanan HTTP MCP terpusat untuk membuat, menyimpan, mengelola, dan mengembangkan MCP skills, dengan dukungan penuh untuk update otomatis oleh AI.
+**Product Name:** Skill Manager  
+**Version:** 1.0 (MVP)  
+**Last Updated:** 2025-12-10
 
----
+## Problem Statement
 
-## Core Enhancements (Pembaruan Penting)
+AI agents (like Claude, ChatGPT) need a centralized way to create, store, and manage reusable skills. Currently, skills are scattered across local files with no version history, making it difficult to:
 
-### 🆕 1. AI Bisa *Membuat Skill Baru*
+- Track skill evolution over time
+- Share skills across different AI sessions
+- Maintain consistent skill quality
+- Enable AI to self-improve skills programmatically
 
-Endpoint MCP mendukung operasi **`create_skill`**, memungkinkan AI membuat skill dari nol, termasuk file awal dan metadata.
+## Target Users
 
-### 🆕 2. Versioning Full Otomatis
+1. **AI Agents (Primary)** - Create and update skills via MCP protocol
+2. **Developers (Secondary)** - View, manage, and monitor skills via Web UI
 
-* Tidak ada input versi dari user atau AI.
-* Sistem menentukan nomor versi berbasis **auto-increment integer**:
+## Scope
 
-  * saat create → versi **1**
-  * tiap update → versi naik: **2, 3, 4, …**
-* Stabil untuk AI karena tidak perlu semver.
+### In Scope (MVP)
 
----
+- Skill CRUD operations via MCP and REST API
+- Automatic integer-based versioning
+- File management within skills
+- Changelog tracking per version
+- Basic Web UI for viewing skills
+- Single-tenant deployment on Cloudflare Workers
 
-# 🎯 Product Requirements Document (Updated Sections Included)
+### Out of Scope (Future)
 
-## User Flow
+- Multi-tenant support
+- Skill marketplace/sharing
+- Skill execution runtime
+- Real-time collaboration
+- OAuth/SSO authentication
 
-1. **Create Skill melalui UI atau MCP**
+## Features
 
-   * Jika dari AI: panggil `create_skill`, sertakan file awal.
-   * Sistem membuat versi **1** otomatis.
+### 1. Skill Management
 
-2. **Update Skill via AI (MCP)**
+**Description:** Create, read, update, and list skills with automatic versioning.
 
-   * AI bisa:
+**Acceptance Criteria:**
+- [ ] AI can create a new skill via MCP `skill.create` tool
+- [ ] AI can update an existing skill via MCP `skill.update` tool
+- [ ] AI can list all skills via MCP `skill.list` tool
+- [ ] AI can get skill details via MCP `skill.get` tool
+- [ ] Each create/update automatically increments version number
+- [ ] Skill names must be unique
 
-     * edit file
-     * menambah file baru
-     * mengubah metadata
-     * mengirim changelog
-   * Sistem:
+### 2. File Management
 
-     * menaikkan versi otomatis
-     * menyimpan versi sebelumnya
-     * menyimpan changelog
+**Description:** Manage files within each skill version.
 
----
+**Acceptance Criteria:**
+- [ ] Skills can contain multiple files with paths (e.g., `src/main.ts`)
+- [ ] Files can be marked as executable with runtime instructions
+- [ ] AI can retrieve individual file content via MCP `skill.get_file` tool
+- [ ] Each version stores a complete snapshot of all files
 
-## MVP Features
+### 3. Version History
 
-### 🔴 Core Features
+**Description:** Track all changes to skills over time.
 
-#### 1. Skill Management (CRUD)
+**Acceptance Criteria:**
+- [ ] Every skill starts at version 1
+- [ ] Every update creates a new version (previous + 1)
+- [ ] Each version stores: changelog, created_at, created_by (ai/human)
+- [ ] Previous versions are preserved and accessible
+- [ ] No manual version number input allowed
 
-Sekarang termasuk:
+### 4. Web UI
 
-### 🆕 **MCP Create Skill**
+**Description:** Browser interface for viewing and managing skills.
 
-* Endpoint: `POST /mcp/skills/create`
-* Input:
-
-  ```json
-  {
-    "name": "string",
-    "description": "string",
-    "files": [
-      {
-        "path": "string",
-        "content": "string",
-        "is_executable": false,
-        "run_instructions_for_ai": "string"
-      }
-    ],
-    "changelog": "string"
-  }
-  ```
-* Output: skill baru dengan versi **1**
-
-Utility:
-
-* AI dapat membuat skill baru tanpa UI sama sekali.
-
----
-
-#### 2. File Management
-
-Termasuk:
-
-* Add file
-* Update file
-* Delete/disable file
-* **Add file via MCP update_skill**
-* Mark file as executable
-* Provide AI runtime instructions
-
-Bagian tambahan ini penting:
-
-> *Saat update skill, AI dapat menambah file baru, dan tindakan ini otomatis memicu pembuatan versi baru.*
-
----
-
-#### 3. Versioning
-
-### 🆕 Versioning Rules
-
-* Setiap skill memiliki integer version counter.
-* **Create skill → version = 1**
-* **Update skill → version = previous + 1**
-* Seluruh isi versi (files + metadata) disimpan di D1.
-
-### Changelog
-
-* AI menghasilkan ringkasan perubahan
-* Disimpan per versi
-
-### Version Storage
-
-D1 table:
-
-```
-skill_versions:
-  id
-  skill_id
-  version_number (int)
-  changelog
-  created_at
-  created_by (ai/human)
-```
-
----
-
-#### 4. MCP Endpoints
-
-### **READ**
-
-* `get_available_skills`
-* `get_skill_details`
-* `get_skill_related_file`
-
-### **WRITE**
-
-* 🆕 `create_skill`
-* `update_skill`
-
-  * update file
-  * add file
-  * update metadata
-  * send changelog
-
-Versioning selalu otomatis dan tidak dapat dimodifikasi.
-
----
-
-## Database Design
-
-### skills
-
-| column      | type      |
-| ----------- | --------- |
-| id          | uuid      |
-| name        | text      |
-| description | text      |
-| active      | boolean   |
-| created_at  | timestamp |
-| updated_at  | timestamp |
-
-### skill_versions
-
-| column         | type                   |
-| -------------- | ---------------------- |
-| id             | uuid                   |
-| skill_id       | uuid                   |
-| version_number | int (auto incremented) |
-| changelog      | text                   |
-| created_at     | timestamp              |
-| created_by     | text (“ai” or “human”) |
-
-### skill_files
-
-| column                  | type    |
-| ----------------------- | ------- |
-| id                      | uuid    |
-| skill_id                | uuid    |
-| version_id              | uuid    |
-| path                    | text    |
-| content                 | text    |
-| is_executable           | boolean |
-| run_instructions_for_ai | text    |
-
----
-
-## UI (unchanged but clarified)
-
-* Create skill via UI optional — MCP create is primary.
-* UI can view:
-
-  * skill list
-  * files
-  * version history
-  * changelog
-* Editing skill melalui UI opsional → AI akan lebih sering melakukan update.
-
----
+**Acceptance Criteria:**
+- [ ] List all skills with name, status, latest version
+- [ ] View skill details and version history
+- [ ] View file contents within a version
+- [ ] Toggle skill active/inactive status
 
 ## Success Metrics
 
-1. **AI-generated skills**
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Skill creation success rate | > 95% | MCP calls resulting in successful skill creation |
+| API response time (p95) | < 500ms | Time from request to response |
+| Version integrity | 100% | No version number gaps or duplicates |
+| UI page load time | < 2s | Time to interactive |
 
-   * ≥ 1 skill dibuat via MCP `create_skill`
+## MVP Checklist
 
-2. **Automatic versioning works**
+### MCP Tools
+- [ ] `skill.create` - Create new skill with files
+- [ ] `skill.update` - Update skill (edit/add files, metadata)
+- [ ] `skill.list` - List all skills
+- [ ] `skill.get` - Get skill details with file list
+- [ ] `skill.get_file` - Get individual file content
 
-   * Versi naik otomatis pada setiap update skill
-   * Tidak ada intervensi manual penomoran
+### REST API
+- [ ] `GET /api/skills` - List skills
+- [ ] `GET /api/skills/:id` - Get skill details
+- [ ] `GET /api/skills/:id/versions` - List versions
+- [ ] `GET /api/skills/:id/versions/:version/files/:path` - Get file
 
-3. **AI-driven updates**
-
-   * ≥ 3 update skill dilakukan via MCP
-   * Update mencakup:
-
-     * edit file
-     * tambah file
-     * update metadata
-
----
-
-## MVP Completion Checklist
-
-### MCP Features
-
-* [ ] MCP `create_skill` implemented
-* [ ] MCP `update_skill` supports:
-
-  * update file
-  * add file
-  * changelog
-* [ ] Version auto-increment implemented
-
-### Versioning
-
-* [ ] Version always increases automatically
-* [ ] Never accepts manual version input
-* [ ] Changelog stored correctly per version
-
-### Database
-
-* [ ] Tables support versioned files
-* [ ] Versioning logic atomic & consistent
+### Web UI
+- [ ] Skill list page
+- [ ] Skill detail page with version history
+- [ ] File viewer
