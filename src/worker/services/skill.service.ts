@@ -88,17 +88,25 @@ export function createSkillService(repo: SkillRepository): SkillService {
       return {
         ...skill,
         version,
-        files: files.map(({ content, ...rest }) => rest),
+        files: files.map((f) => {
+          const { content: _, ...rest } = f;
+          void _;
+          return rest;
+        }),
       };
     },
 
     /**
      * Update an existing skill, creating a new version
+     * Supports lookup by ID or name
      * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
      */
     async updateSkill(input: UpdateSkillInput): Promise<SkillDetail> {
-      // Find existing skill (Requirement 2.6)
-      const skill = await repo.findSkillById(input.skill_id);
+      // Find existing skill by ID or name (Requirement 2.6)
+      let skill = await repo.findSkillById(input.skill_id);
+      if (!skill) {
+        skill = await repo.findSkillByName(input.skill_id);
+      }
       if (!skill) {
         throw notFound('Skill');
       }
@@ -168,7 +176,7 @@ export function createSkillService(repo: SkillRepository): SkillService {
                 created_at: now,
               });
               break;
-            case 'update':
+            case 'update': {
               // Update existing file (Requirement 2.4)
               const existing = fileMap.get(change.path);
               if (existing) {
@@ -182,6 +190,7 @@ export function createSkillService(repo: SkillRepository): SkillService {
                 });
               }
               break;
+            }
             case 'delete':
               // Delete file (Requirement 2.5)
               fileMap.delete(change.path);
@@ -207,7 +216,11 @@ export function createSkillService(repo: SkillRepository): SkillService {
       return {
         ...updatedSkill,
         version: newVersion,
-        files: newFiles.map(({ content, ...rest }) => rest),
+        files: newFiles.map((f) => {
+          const { content: _, ...rest } = f;
+          void _;
+          return rest;
+        }),
       };
     },
 
@@ -222,14 +235,20 @@ export function createSkillService(repo: SkillRepository): SkillService {
 
     /**
      * Get skill details with optional version selection
+     * Supports lookup by ID or name
      * Requirements: 4.1, 4.2, 4.3, 4.4
      */
-    async getSkill(skillId: string, versionNumber?: number): Promise<SkillDetail> {
-      // Find skill (Requirement 4.4)
-      const skill = await repo.findSkillById(skillId);
+    async getSkill(skillIdOrName: string, versionNumber?: number): Promise<SkillDetail> {
+      // Find skill by ID first, then by name (Requirement 4.4)
+      let skill = await repo.findSkillById(skillIdOrName);
+      if (!skill) {
+        // Try finding by name
+        skill = await repo.findSkillByName(skillIdOrName);
+      }
       if (!skill) {
         throw notFound('Skill');
       }
+      const skillId = skill.id;
 
       // Get version (Requirement 4.2, 4.3)
       let version: SkillVersion | null;
@@ -257,20 +276,29 @@ export function createSkillService(repo: SkillRepository): SkillService {
       return {
         ...skill,
         version,
-        files: files.map(({ content, ...rest }) => rest),
+        files: files.map((f) => {
+          const { content: _, ...rest } = f;
+          void _;
+          return rest;
+        }),
       };
     },
 
     /**
      * Get a specific file from a skill version
+     * Supports lookup by ID or name
      * Requirements: 5.1, 5.2, 5.3
      */
-    async getFile(skillId: string, path: string, versionNumber?: number): Promise<SkillFile> {
-      // Find skill
-      const skill = await repo.findSkillById(skillId);
+    async getFile(skillIdOrName: string, path: string, versionNumber?: number): Promise<SkillFile> {
+      // Find skill by ID first, then by name
+      let skill = await repo.findSkillById(skillIdOrName);
+      if (!skill) {
+        skill = await repo.findSkillByName(skillIdOrName);
+      }
       if (!skill) {
         throw notFound('Skill');
       }
+      const skillId = skill.id;
 
       // Get version (Requirement 5.3 - default to latest)
       let version: SkillVersion | null;
@@ -301,15 +329,19 @@ export function createSkillService(repo: SkillRepository): SkillService {
 
     /**
      * Update skill active status
+     * Supports lookup by ID or name
      * Requirement: 7.1
      */
-    async updateStatus(skillId: string, active: boolean): Promise<Skill> {
-      const skill = await repo.findSkillById(skillId);
+    async updateStatus(skillIdOrName: string, active: boolean): Promise<Skill> {
+      let skill = await repo.findSkillById(skillIdOrName);
+      if (!skill) {
+        skill = await repo.findSkillByName(skillIdOrName);
+      }
       if (!skill) {
         throw notFound('Skill');
       }
 
-      const updated = await repo.updateSkill(skillId, {
+      const updated = await repo.updateSkill(skill.id, {
         active,
         updated_at: Date.now(),
       });

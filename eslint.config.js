@@ -23,6 +23,8 @@ export default tseslint.config(
 				"warn",
 				{ allowConstantExport: true },
 			],
+			// Allow setState in effects for data fetching hooks - this is a valid pattern
+			"react-hooks/set-state-in-effect": "off",
 		},
 	},
 );

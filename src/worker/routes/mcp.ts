@@ -74,7 +74,7 @@ const TOOL_DEFINITIONS = [
     inputSchema: {
       type: 'object',
       properties: {
-        skill_id: { type: 'string', description: 'ID of the skill to update' },
+        name: { type: 'string', description: 'Name of the skill to update (e.g., "svelte5-expert")' },
         description: { type: 'string', description: 'New description for the skill' },
         file_changes: {
           type: 'array',
@@ -94,7 +94,7 @@ const TOOL_DEFINITIONS = [
         },
         changelog: { type: 'string', description: 'Changelog for this version' },
       },
-      required: ['skill_id'],
+      required: ['name'],
     },
   },
   {
@@ -112,27 +112,27 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'skill_get',
-    description: 'Get detailed information about a skill',
+    description: 'Get detailed information about a skill by name',
     inputSchema: {
       type: 'object',
       properties: {
-        skill_id: { type: 'string', description: 'ID of the skill' },
+        name: { type: 'string', description: 'Name of the skill (e.g., "svelte5-expert")' },
         version: { type: 'number', description: 'Specific version number (defaults to latest)' },
       },
-      required: ['skill_id'],
+      required: ['name'],
     },
   },
   {
     name: 'skill_get_file',
-    description: 'Get the content of a specific file from a skill',
+    description: 'Get the content of a specific file from a skill by name',
     inputSchema: {
       type: 'object',
       properties: {
-        skill_id: { type: 'string', description: 'ID of the skill' },
-        path: { type: 'string', description: 'Path of the file' },
+        name: { type: 'string', description: 'Name of the skill (e.g., "svelte5-expert")' },
+        path: { type: 'string', description: 'Path of the file (e.g., "SKILL.md" or "references/api.md")' },
         version: { type: 'number', description: 'Specific version number (defaults to latest)' },
       },
-      required: ['skill_id', 'path'],
+      required: ['name', 'path'],
     },
   },
 ];
@@ -313,14 +313,14 @@ async function handleSkillCreate(
 }
 
 /**
- * Handle skill.update tool
+ * Handle skill_update tool
  */
 async function handleSkillUpdate(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
   const input: UpdateSkillInput = {
-    skill_id: args.skill_id as string,
+    skill_id: args.name as string, // Use name as identifier
     description: args.description as string | undefined,
     file_changes: args.file_changes as UpdateSkillInput['file_changes'],
     changelog: args.changelog as string | undefined,
@@ -364,16 +364,16 @@ async function handleSkillList(
 }
 
 /**
- * Handle skill.get tool
+ * Handle skill_get tool
  */
 async function handleSkillGet(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
-  const skillId = args.skill_id as string;
+  const skillName = args.name as string;
   const version = args.version as number | undefined;
 
-  const skill = await service.getSkill(skillId, version);
+  const skill = await service.getSkill(skillName, version);
   return successResult({
     id: skill.id,
     name: skill.name,
@@ -394,17 +394,17 @@ async function handleSkillGet(
 }
 
 /**
- * Handle skill.get_file tool
+ * Handle skill_get_file tool
  */
 async function handleSkillGetFile(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
-  const skillId = args.skill_id as string;
+  const skillName = args.name as string;
   const path = args.path as string;
   const version = args.version as number | undefined;
 
-  const file = await service.getFile(skillId, path, version);
+  const file = await service.getFile(skillName, path, version);
   return successResult({
     path: file.path,
     content: file.content,
