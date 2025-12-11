@@ -112,9 +112,10 @@ export async function fetchSkills(params: ListSkillsParams = {}): Promise<ListSk
   if (params.limit) searchParams.set('limit', params.limit.toString());
   if (params.offset) searchParams.set('offset', params.offset.toString());
   if (params.query) searchParams.set('query', params.query);
+  searchParams.set('detailed', 'true'); // Always request detailed format for web UI
 
   const queryString = searchParams.toString();
-  const path = queryString ? `/skills?${queryString}` : '/skills';
+  const path = `/skills?${queryString}`;
 
   return apiFetch<ListSkillsResponse>(path);
 }

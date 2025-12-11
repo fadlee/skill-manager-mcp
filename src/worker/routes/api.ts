@@ -37,12 +37,14 @@ export function createAPIRoutes(service: SkillService) {
     const limit = parseInt(c.req.query('limit') || '50', 10);
     const offset = parseInt(c.req.query('offset') || '0', 10);
     const query = c.req.query('query') || undefined;
+    const detailed = c.req.query('detailed') !== 'false'; // Default to true for web UI
 
     const skills = await service.listSkills({
       activeOnly,
       limit: Math.min(limit, 100), // Cap at 100
       offset: Math.max(offset, 0),
       query,
+      detailed,
     });
 
     return c.json({ ok: true, data: { skills, count: skills.length } });

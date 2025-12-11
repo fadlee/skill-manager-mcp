@@ -234,8 +234,8 @@ export function createSkillService(repo: SkillRepository): SkillService {
     async listSkills(options: ExtendedListSkillsOptions): Promise<SkillWithVersion[] | MinimalSkillResponse[]> {
       // Convert new parameters to existing options format
       const repoOptions: ListSkillsOptions = {
-        // Default to active only unless showInactive is true
-        activeOnly: options.showInactive !== true,
+        // Use activeOnly if provided, otherwise check showInactive
+        activeOnly: options.activeOnly ?? (options.showInactive !== true),
         limit: options.limit,
         offset: options.offset,
         query: options.query,
@@ -243,22 +243,24 @@ export function createSkillService(repo: SkillRepository): SkillService {
 
       const skills = await repo.listSkills(repoOptions);
 
-      // Return detailed format if requested
-      if (options.detailed === true) {
-        return skills.map(skill => ({
+      // Return detailed format if requested (default for web UI)
+      if (options.detailed !== false) {
+        return skills.map((skill) => ({
           ...skill,
           // Ensure description doesn't exceed 1024 characters even in detailed response
-          description: skill.description && skill.description.length > 1024 
+          description:
+            skill.description && skill.description.length > 1024
             ? skill.description.substring(0, 1024)
             : skill.description,
         }));
       }
 
-      // Return minimal format by default
-      return skills.map(skill => ({
+      // Return minimal format only when explicitly requested (for MCP/AI clients)
+      return skills.map((skill) => ({
         name: skill.name,
         // Ensure description doesn't exceed 1024 characters
-        description: skill.description && skill.description.length > 1024 
+        description:
+          skill.description && skill.description.length > 1024
           ? skill.description.substring(0, 1024)
           : skill.description,
       }));
