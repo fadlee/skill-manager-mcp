@@ -12,6 +12,7 @@
 		"publish": true
 	},
 	"dependencies": {
+		"fflate": "^0.8.2",
 		"hono": "4.10.7",
 		"react": "19.2.1",
 		"react-dom": "19.2.1"

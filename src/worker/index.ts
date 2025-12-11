@@ -6,16 +6,19 @@
 
 import { Hono } from 'hono';
 import type { SkillService } from './services/skill.service';
+import type { UploadService } from './services/upload.service';
 import { createSkillRepository } from './repositories';
-import { createSkillService } from './services';
+import { createSkillService, createSessionStore, createUploadService } from './services';
 import { authMiddleware } from './lib/auth';
 import { isAppError } from './lib/errors';
 // Import route creators
 import { createMCPRoutes } from './routes/mcp';
+import { createUploadRoutes } from './routes/upload';
 
 // Extend Hono context with our variables
 type Variables = {
   service: SkillService;
+  uploadService: UploadService;
 };
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -38,11 +41,14 @@ app.onError((err, c) => {
 // Health check endpoint (no auth required)
 app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }));
 
-// Create service per request middleware
+// Create services per request middleware
 app.use('*', async (c, next) => {
   const repo = createSkillRepository(c.env.DB);
   const service = createSkillService(repo);
+  const sessionStore = createSessionStore(c.env.DB);
+  const uploadService = createUploadService(sessionStore, service);
   c.set('service', service);
+  c.set('uploadService', uploadService);
   await next();
 });
 
@@ -138,6 +144,25 @@ app.patch('/api/skills/:id', authMiddleware(), async (c) => {
 
   const skill = await service.updateStatus(skillId, body.active);
   return c.json({ ok: true, data: skill });
+});
+
+// ============================================================================
+// Upload Routes (requires auth)
+// ============================================================================
+
+app.post('/api/skills/upload/*', authMiddleware(), async (c) => {
+  const uploadService = c.get('uploadService');
+
+  // Create upload routes sub-app
+  const uploadApp = createUploadRoutes(uploadService);
+
+  // Rewrite path to remove /api/skills/upload prefix
+  const url = new URL(c.req.url);
+  const newPath = url.pathname.replace('/api/skills/upload', '');
+  const newUrl = new URL(newPath + url.search, url.origin);
+
+  const newRequest = new Request(newUrl, c.req.raw);
+  return uploadApp.fetch(newRequest, c.env, c.executionCtx);
 });
 
 // ============================================================================

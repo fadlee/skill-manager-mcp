@@ -1,0 +1,163 @@
+# Implementation Plan
+
+- [x] 1. Set up ZIP parsing infrastructure
+  - [x] 1.1 Add fflate library for ZIP parsing in Cloudflare Workers
+    - Install fflate package (`bun add fflate`)
+    - Add types if needed
+    - _Requirements: 1.2_
+  - [x] 1.2 Create ZIP parser service with parseZip and extractSkillFolders methods
+    - Create `src/worker/services/zip-parser.service.ts`
+    - Implement parseZip to extract ZIP contents
+    - Implement extractSkillFolders to identify root-level folders as skills
+    - Handle binary vs text file detection
+    - _Requirements: 1.2, 1.5, 6.3_
+  - [ ]* 1.3 Write property test for ZIP parsing
+    - **Property 1: ZIP parsing identifies skill folders and extracts names**
+    - **Validates: Requirements 1.2, 1.5**
+  - [x] 1.4 Create file type detector utility
+    - Create `src/worker/lib/file-type.ts`
+    - Implement isExecutable for .py, .sh, .js, .ts extensions
+    - Implement getScriptLanguage mapping
+    - Implement isBinary detection
+    - _Requirements: 6.1, 6.2, 6.3_
+  - [ ]* 1.5 Write property test for executable file detection
+    - **Property 9: Executable file detection**
+    - **Validates: Requirements 6.1, 6.2**
+
+- [x] 2. Implement session management
+  - [x] 2.1 Create session store service
+    - Create `src/worker/services/session.service.ts`
+    - Implement in-memory session store (Map-based for MVP)
+    - Add create, get, delete methods
+    - Implement TTL expiration (10 minutes)
+    - _Requirements: 1.7, 5.7_
+  - [ ]* 2.2 Write property test for session persistence
+    - **Property 3: Session persistence**
+    - **Validates: Requirements 1.7, 5.7**
+
+- [x] 3. Implement upload validation
+  - [x] 3.1 Create upload validation module
+    - Create `src/worker/lib/upload-validation.ts`
+    - Implement ZIP size validation (max 10MB)
+    - Implement skill folder validation (require SKILL.md)
+    - Implement file size validation (max 200KB per file)
+    - Implement file count validation (max 50 files per skill)
+    - _Requirements: 1.3, 2.1, 2.4, 2.5_
+  - [ ]* 3.2 Write property test for SKILL.md validation
+    - **Property 2: Preview includes validation status**
+    - **Validates: Requirements 1.6, 2.1, 2.2**
+
+- [x] 4. Implement upload service
+  - [x] 4.1 Create upload service with parseZip method
+    - Create `src/worker/services/upload.service.ts`
+    - Implement parseZip to orchestrate ZIP parsing, validation, and session creation
+    - Return ParseResult with session_id and skill previews
+    - _Requirements: 1.2, 1.6, 1.7_
+  - [x] 4.2 Implement processSelected method in upload service
+    - Retrieve session data by session_id
+    - Filter skills by selected_skills array
+    - Call existing SkillService for each selected skill
+    - Handle existing skill names (create new version)
+    - Set created_by as 'human'
+    - Return ProcessResult with import results
+    - _Requirements: 3.4, 3.5, 3.6, 3.7_
+  - [ ]* 4.3 Write property test for selection filtering
+    - **Property 5: Selection filtering**
+    - **Validates: Requirements 3.4**
+  - [ ]* 4.4 Write property test for existing skill versioning
+    - **Property 6: Existing skill creates new version**
+    - **Validates: Requirements 3.5**
+  - [ ]* 4.5 Write property test for result completeness
+    - **Property 7: Result summary completeness**
+    - **Validates: Requirements 3.6, 5.6**
+  - [ ]* 4.6 Write property test for human creator attribution
+    - **Property 8: Human creator attribution**
+    - **Validates: Requirements 3.7**
+
+- [x] 5. Checkpoint - Ensure all backend tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement upload API endpoints
+  - [x] 6.1 Create parse endpoint handler
+    - Create `src/worker/routes/upload.ts`
+    - Implement POST `/api/skills/upload/parse` handler
+    - Parse multipart form data to extract ZIP file
+    - Call uploadService.parseZip
+    - Return ParseResponse with session_id and skill previews
+    - _Requirements: 5.1, 5.4, 5.5_
+  - [x] 6.2 Create process endpoint handler
+    - Implement POST `/api/skills/upload/process` handler
+    - Parse JSON body for session_id and selected_skills
+    - Call uploadService.processSelected
+    - Return ProcessResponse with import results
+    - Handle session not found error
+    - _Requirements: 5.2, 5.6, 5.7_
+  - [x] 6.3 Register upload routes in main router
+    - Update `src/worker/index.ts` to include upload routes
+    - Apply auth middleware to upload endpoints
+    - _Requirements: 5.3_
+
+- [x] 7. Implement upload UI components
+  - [x] 7.1 Create SkillUpload component with file selection
+    - Create `src/react-app/components/SkillUpload.tsx`
+    - Implement file input for ZIP selection
+    - Add drag-and-drop support
+    - Show loading state during parse
+    - _Requirements: 1.1, 4.1_
+  - [x] 7.2 Create SkillPreviewList component
+    - Create `src/react-app/components/SkillPreviewList.tsx`
+    - Display list of detected skills with checkboxes
+    - Show validation status (valid/invalid) for each skill
+    - Disable checkbox for invalid skills
+    - Show error messages for invalid skills
+    - _Requirements: 3.1, 3.2_
+  - [x] 7.3 Create SkillImportResult component
+    - Create `src/react-app/components/SkillImportResult.tsx`
+    - Display import results with success/failed status
+    - Show version number for successful imports
+    - Show error message for failed imports
+    - Add navigation links to imported skills
+    - Add "Upload More" button
+    - _Requirements: 4.3, 4.4, 4.5, 4.6_
+  - [x] 7.4 Integrate upload flow in SkillUpload component
+    - Implement state machine for upload steps (select-file → preview → importing → complete)
+    - Wire up API calls for parse and process
+    - Handle errors and display error messages
+    - _Requirements: 4.1, 4.2_
+
+- [x] 8. Add upload API client functions
+  - [x] 8.1 Create upload API functions in api.ts
+    - Add parseZipUpload function
+    - Add processSkillUpload function
+    - Update `src/react-app/lib/api.ts`
+    - _Requirements: 5.1, 5.2_
+
+- [x] 9. Integrate upload UI into application
+  - [x] 9.1 Add upload button/link to SkillList page
+    - Update `src/react-app/pages/SkillList.tsx`
+    - Add "Upload Skills" button that opens upload modal/page
+    - _Requirements: 1.1_
+  - [x] 9.2 Create upload page or modal
+    - Create `src/react-app/pages/SkillUpload.tsx` or integrate as modal
+    - Include SkillUpload component
+    - Handle navigation after successful upload
+    - _Requirements: 4.5_
+
+- [x] 10. Add upload styles
+  - [x] 10.1 Create upload component styles
+    - Update `src/react-app/styles/skills.css` or create new CSS file
+    - Style file drop zone
+    - Style skill preview list with checkboxes
+    - Style import result summary
+    - _Requirements: 4.1, 4.3_
+
+- [ ]* 11. Write property test for path structure preservation
+  - **Property 4: Path structure preservation**
+  - **Validates: Requirements 2.3**
+
+- [ ]* 12. Write property test for binary file handling
+  - **Property 10: Binary file handling**
+  - **Validates: Requirements 6.3**
+
+- [x] 13. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

@@ -3,7 +3,9 @@
  * Requirements: 10.1, 10.2
  */
 
+import { useState } from 'react';
 import { useSkills } from '../hooks/useSkills';
+import { SkillUpload } from '../components/SkillUpload';
 import type { SkillWithVersion } from '../../shared/types';
 
 interface SkillListProps {
@@ -93,6 +95,11 @@ function EmptyState() {
  */
 export function SkillList({ onSelectSkill }: SkillListProps) {
   const { skills, loading, error, refetch } = useSkills();
+  const [showUpload, setShowUpload] = useState(false);
+
+  const handleUploadComplete = () => {
+    refetch();
+  };
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -102,22 +109,39 @@ export function SkillList({ onSelectSkill }: SkillListProps) {
     return <ErrorDisplay message={error} onRetry={refetch} />;
   }
 
-  if (skills.length === 0) {
-    return <EmptyState />;
-  }
-
   return (
     <div className="skill-list">
-      <h2>Skills</h2>
-      <div className="skill-grid">
-        {skills.map((skill) => (
-          <SkillCard
-            key={skill.id}
-            skill={skill}
-            onClick={() => onSelectSkill(skill.id)}
-          />
-        ))}
+      <div className="skill-list-header">
+        <h2>Skills</h2>
+        <button className="upload-button" onClick={() => setShowUpload(true)}>
+          <span>📦</span> Upload Skills
+        </button>
       </div>
+
+      {skills.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="skill-grid">
+          {skills.map((skill) => (
+            <SkillCard
+              key={skill.id}
+              skill={skill}
+              onClick={() => onSelectSkill(skill.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {showUpload && (
+        <div className="modal-overlay" onClick={() => setShowUpload(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <SkillUpload
+              onUploadComplete={handleUploadComplete}
+              onClose={() => setShowUpload(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

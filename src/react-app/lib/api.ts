@@ -13,20 +13,65 @@ import type {
 } from '../../shared/types';
 
 const API_BASE = '/api';
+const API_KEY_STORAGE_KEY = 'skill_manager_api_key';
 
 /**
  * API response type
  */
 type ApiResult<T> = APIResponse<T> | APIError;
 
+// ============================================================================
+// Auth utilities
+// ============================================================================
+
 /**
- * Fetch wrapper with error handling
+ * Get API key from localStorage
+ */
+export function getApiKey(): string | null {
+  return localStorage.getItem(API_KEY_STORAGE_KEY);
+}
+
+/**
+ * Set API key in localStorage
+ */
+export function setApiKey(key: string): void {
+  localStorage.setItem(API_KEY_STORAGE_KEY, key);
+}
+
+/**
+ * Remove API key from localStorage
+ */
+export function clearApiKey(): void {
+  localStorage.removeItem(API_KEY_STORAGE_KEY);
+}
+
+/**
+ * Check if user is authenticated (has API key)
+ */
+export function isAuthenticated(): boolean {
+  return !!getApiKey();
+}
+
+/**
+ * Get auth headers for API requests
+ */
+function getAuthHeaders(): Record<string, string> {
+  const apiKey = getApiKey();
+  if (apiKey) {
+    return { Authorization: `Bearer ${apiKey}` };
+  }
+  return {};
+}
+
+/**
+ * Fetch wrapper with error handling and auth
  */
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...options?.headers,
     },
   });
@@ -112,5 +157,96 @@ export async function updateSkillStatus(
   return apiFetch<SkillWithVersion>(`/skills/${skillId}`, {
     method: 'PATCH',
     body: JSON.stringify({ active }),
+  });
+}
+
+
+// ============================================================================
+// Upload API Types and Functions
+// Requirements: 5.1, 5.2
+// ============================================================================
+
+/**
+ * Skill preview from ZIP parsing
+ */
+export interface SkillPreview {
+  name: string;
+  valid: boolean;
+  file_count: number;
+  errors: string[];
+  description?: string;
+}
+
+/**
+ * Result of parsing a ZIP file
+ */
+export interface ParseResult {
+  session_id: string;
+  skills: SkillPreview[];
+  expires_at: number;
+}
+
+/**
+ * Result of importing a single skill
+ */
+export interface SkillImportResult {
+  name: string;
+  status: 'success' | 'failed';
+  skill_id?: string;
+  version?: number;
+  error?: string;
+  is_new?: boolean;
+}
+
+/**
+ * Result of processing selected skills
+ */
+export interface ProcessResult {
+  total: number;
+  successful: number;
+  failed: number;
+  results: SkillImportResult[];
+}
+
+/**
+ * Parse ZIP file and get preview
+ * Requirements: 5.1
+ */
+export async function parseZipUpload(file: File): Promise<ParseResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/skills/upload/parse`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      ...getAuthHeaders(),
+      // Don't set Content-Type header - browser will set it with boundary for multipart
+    },
+  });
+
+  const data = (await response.json()) as ApiResult<ParseResult>;
+
+  if (!data.ok) {
+    throw new Error(data.error.message);
+  }
+
+  return data.data;
+}
+
+/**
+ * Process selected skills from session
+ * Requirements: 5.2
+ */
+export async function processSkillUpload(
+  sessionId: string,
+  selectedSkills: string[]
+): Promise<ProcessResult> {
+  return apiFetch<ProcessResult>('/skills/upload/process', {
+    method: 'POST',
+    body: JSON.stringify({
+      session_id: sessionId,
+      selected_skills: selectedSkills,
+    }),
   });
 }
