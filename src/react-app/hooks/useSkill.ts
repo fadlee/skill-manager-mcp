@@ -20,6 +20,7 @@ interface UseSkillState {
 interface UseSkillReturn extends UseSkillState {
   refetch: () => void;
   setVersion: (version: number) => void;
+  updateSkill: (updates: Partial<SkillDetail>) => void;
 }
 
 export function useSkill(skillId: string, initialVersion?: number): UseSkillReturn {
@@ -58,7 +59,14 @@ export function useSkill(skillId: string, initialVersion?: number): UseSkillRetu
     };
   }, [loadSkill]);
 
-  return { ...state, refetch: loadSkill, setVersion };
+  const updateSkill = useCallback((updates: Partial<SkillDetail>) => {
+    setState(prev => ({
+      ...prev,
+      skill: prev.skill ? { ...prev.skill, ...updates } : null
+    }));
+  }, []);
+
+  return { ...state, refetch: loadSkill, setVersion, updateSkill };
 }
 
 // ============================================================================

@@ -5,7 +5,9 @@
 
 import { useState } from 'react';
 import { useSkills } from '../hooks/useSkills';
+import { useSkillStatusToggleWithOptimisticUpdate } from '../hooks/useSkillStatusToggle';
 import { SkillUpload } from '../components/SkillUpload';
+import { SkillStatusToggle } from '../components/SkillStatusToggle';
 import type { SkillWithVersion } from '../../shared/types';
 
 interface SkillListProps {
@@ -18,27 +20,55 @@ interface SkillListProps {
 function SkillCard({
   skill,
   onClick,
+  onStatusChange,
 }: {
   skill: SkillWithVersion;
   onClick: () => void;
+  onStatusChange: (newStatus: boolean) => Promise<void>;
 }) {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger card click if the click came from the toggle area
+    const target = e.target as HTMLElement;
+    if (target.closest('[role="switch"]') || target.closest('.skill-toggle-container')) {
+      return;
+    }
+    onClick();
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent) => {
+    // Don't trigger card action if focus is on the toggle
+    const target = e.target as HTMLElement;
+    if (target.closest('[role="switch"]') || target.closest('.skill-toggle-container')) {
+      return;
+    }
+    if (e.key === 'Enter') {
+      onClick();
+    }
+  };
+
   return (
     <div
       className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick()}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
       role="button"
       tabIndex={0}
     >
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold text-gray-900 m-0">{skill.name}</h3>
-        <span className={`text-xs px-2 py-1 rounded font-medium ${
-          skill.active 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {skill.active ? 'Active' : 'Inactive'}
-        </span>
+      <div className="flex justify-between items-start mb-2 gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-gray-900 m-0 truncate">{skill.name}</h3>
+        </div>
+        <div 
+          className="skill-toggle-container flex-shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <SkillStatusToggle
+            skillId={skill.id}
+            currentStatus={skill.active}
+            onStatusChange={onStatusChange}
+            size="small"
+          />
+        </div>
       </div>
       {skill.description && (
         <p className="text-gray-600 text-sm my-2 line-clamp-2 overflow-hidden">{skill.description}</p>
@@ -103,8 +133,14 @@ function EmptyState() {
  * Skill List Page
  */
 export function SkillList({ onSelectSkill }: SkillListProps) {
-  const { skills, loading, error, refetch } = useSkills();
+  const { filteredSkills, loading, error, refetch, updateSkill, rollbackSkill } = useSkills({ activeOnly: false });
   const [showUpload, setShowUpload] = useState(false);
+
+  // Initialize the toggle hook with optimistic updates
+  const { toggleStatus } = useSkillStatusToggleWithOptimisticUpdate(
+    updateSkill,
+    rollbackSkill
+  );
 
   const handleUploadComplete = () => {
     refetch();
@@ -130,15 +166,16 @@ export function SkillList({ onSelectSkill }: SkillListProps) {
         </button>
       </div>
 
-      {skills.length === 0 ? (
+      {filteredSkills.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {skills.map((skill) => (
+          {filteredSkills.map((skill) => (
             <SkillCard
               key={skill.id}
               skill={skill}
               onClick={() => onSelectSkill(skill.id)}
+              onStatusChange={() => toggleStatus(skill.id, skill.active)}
             />
           ))}
         </div>

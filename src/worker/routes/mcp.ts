@@ -99,11 +99,11 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'skill_list',
-    description: 'List all skills with optional filtering',
+    description: 'List skills (defaults to active skills only)',
     inputSchema: {
       type: 'object',
       properties: {
-        active_only: { type: 'boolean', description: 'Only return active skills' },
+        active_only: { type: 'boolean', description: 'Filter by active status (default: true). Set to false to include inactive skills' },
         limit: { type: 'number', description: 'Maximum number of results' },
         offset: { type: 'number', description: 'Number of results to skip' },
         query: { type: 'string', description: 'Search query for skill name' },
@@ -351,7 +351,8 @@ async function handleSkillList(
   service: SkillService
 ): Promise<ToolResult> {
   const options: ListSkillsOptions = {
-    activeOnly: args.active_only as boolean | undefined,
+    // Default to active_only: true unless explicitly set to false
+    activeOnly: args.active_only !== false ? true : false,
     limit: args.limit as number | undefined,
     offset: args.offset as number | undefined,
     query: args.query as string | undefined,

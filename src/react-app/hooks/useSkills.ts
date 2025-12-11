@@ -17,6 +17,9 @@ interface UseSkillsState {
 interface UseSkillsReturn extends UseSkillsState {
   refetch: () => void;
   setParams: (params: ListSkillsParams) => void;
+  updateSkill: (skillId: string, updates: Partial<SkillWithVersion>) => void;
+  rollbackSkill: (skillId: string) => void;
+  filteredSkills: SkillWithVersion[];
 }
 
 /**
@@ -30,6 +33,9 @@ export function useSkills(initialParams: ListSkillsParams = {}): UseSkillsReturn
     error: null,
     count: 0,
   });
+  
+  // Store original skills for rollback functionality
+  const [originalSkills, setOriginalSkills] = useState<Map<string, SkillWithVersion>>(new Map());
 
   const loadSkills = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -42,6 +48,11 @@ export function useSkills(initialParams: ListSkillsParams = {}): UseSkillsReturn
         loading: false,
         error: null,
       });
+      
+      // Update original skills map for rollback functionality
+      const skillsMap = new Map<string, SkillWithVersion>();
+      data.skills.forEach(skill => skillsMap.set(skill.id, { ...skill }));
+      setOriginalSkills(skillsMap);
     } catch (err) {
       setState((prev) => ({
         ...prev,
@@ -51,6 +62,38 @@ export function useSkills(initialParams: ListSkillsParams = {}): UseSkillsReturn
     }
   }, [params]);
 
+  const updateSkill = useCallback((skillId: string, updates: Partial<SkillWithVersion>) => {
+    setState(prev => {
+      const updatedSkills = prev.skills.map(skill => 
+        skill.id === skillId ? { ...skill, ...updates } : skill
+      );
+      
+      return {
+        ...prev,
+        skills: updatedSkills,
+      };
+    });
+  }, []);
+
+  const rollbackSkill = useCallback((skillId: string) => {
+    const originalSkill = originalSkills.get(skillId);
+    if (originalSkill) {
+      setState(prev => {
+        const restoredSkills = prev.skills.map(skill => 
+          skill.id === skillId ? { ...originalSkill } : skill
+        );
+        
+        return {
+          ...prev,
+          skills: restoredSkills,
+        };
+      });
+    }
+  }, [originalSkills]);
+
+  // No need for frontend filtering since backend already handles activeOnly filtering
+  const filteredSkills = state.skills;
+
   useEffect(() => {
     loadSkills();
   }, [loadSkills]);
@@ -59,5 +102,8 @@ export function useSkills(initialParams: ListSkillsParams = {}): UseSkillsReturn
     ...state,
     refetch: loadSkills,
     setParams,
+    updateSkill,
+    rollbackSkill,
+    filteredSkills,
   };
 }

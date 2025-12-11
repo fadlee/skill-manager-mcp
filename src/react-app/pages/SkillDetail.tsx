@@ -3,9 +3,11 @@
  * Requirements: 11.1, 11.2
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSkill, useSkillFile } from '../hooks/useSkill';
+import { useSkillStatusToggle } from '../hooks/useSkillStatusToggle';
 import { FileViewer } from '../components/FileViewer';
+import { SkillStatusToggle } from '../components/SkillStatusToggle';
 
 interface SkillDetailProps {
   skillId: string;
@@ -88,25 +90,27 @@ function FileList({
  */
 function SkillMetadata({
   skill,
+  onStatusChange,
 }: {
   skill: {
+    id: string;
     name: string;
     description: string | null;
     active: boolean;
     version: { version_number: number; changelog: string | null; created_at: number };
   };
+  onStatusChange: (newStatus: boolean) => Promise<void>;
 }) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-4 mb-3">
         <h2 className="text-2xl font-semibold text-gray-900 m-0">{skill.name}</h2>
-        <span className={`text-xs px-2 py-1 rounded font-medium ${
-          skill.active 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {skill.active ? 'Active' : 'Inactive'}
-        </span>
+        <SkillStatusToggle
+          skillId={skill.id}
+          currentStatus={skill.active}
+          onStatusChange={onStatusChange}
+          size="small"
+        />
       </div>
       {skill.description && <p className="text-gray-600 my-3">{skill.description}</p>}
       {skill.version.changelog && (
@@ -125,14 +129,31 @@ function SkillMetadata({
  * Skill Detail Page
  */
 export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
-  const { skill, loading, error, setVersion } = useSkill(skillId);
+  const { skill, loading, error, setVersion, updateSkill } = useSkill(skillId);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const { toggleStatus } = useSkillStatusToggle();
 
   const { file, loading: fileLoading, error: fileError } = useSkillFile(
     skillId,
     skill?.version.version_number ?? 1,
     selectedFile
   );
+
+  const handleStatusChange = useCallback(async (newStatus: boolean) => {
+    if (!skill) return;
+    
+    // Optimistic update
+    updateSkill({ active: newStatus });
+    
+    try {
+      await toggleStatus(skillId, skill.active);
+      // Success - optimistic update was correct
+    } catch (err) {
+      // Error - rollback optimistic update
+      updateSkill({ active: skill.active });
+      throw err; // Re-throw to let SkillStatusToggle handle error display
+    }
+  }, [skill, updateSkill, toggleStatus, skillId]);
 
   if (loading) {
     return (
@@ -165,7 +186,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
         ← Back to Skills
       </button>
 
-      <SkillMetadata skill={skill} />
+      <SkillMetadata skill={skill} onStatusChange={handleStatusChange} />
 
       <VersionSelector
         currentVersion={skill.version.version_number}
