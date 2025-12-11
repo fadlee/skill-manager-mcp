@@ -23,12 +23,13 @@ function VersionSelector({
   onVersionChange: (version: number) => void;
 }) {
   return (
-    <div className="version-selector">
-      <label htmlFor="version-select">Version:</label>
+    <div className="mb-4">
+      <label htmlFor="version-select" className="mr-2 text-gray-700">Version:</label>
       <select
         id="version-select"
         value={currentVersion}
         onChange={(e) => onVersionChange(parseInt(e.target.value, 10))}
+        className="px-2 py-1 border border-gray-300 rounded text-base"
       >
         {/* Generate options for versions 1 to current */}
         {Array.from({ length: currentVersion }, (_, i) => currentVersion - i).map(
@@ -56,20 +57,24 @@ function FileList({
   onSelectFile: (path: string) => void;
 }) {
   return (
-    <div className="file-list">
-      <h4>Files</h4>
-      <ul>
+    <div className="bg-gray-50 rounded-lg p-4 lg:max-h-96 lg:overflow-y-auto">
+      <h4 className="text-gray-900 m-0 mb-4">Files</h4>
+      <ul className="list-none p-0 m-0">
         {files.map((file) => (
           <li
             key={file.path}
-            className={`file-item ${selectedPath === file.path ? 'selected' : ''}`}
+            className={`flex items-center p-2 rounded cursor-pointer transition-colors ${
+              selectedPath === file.path 
+                ? 'bg-blue-600 text-white' 
+                : 'hover:bg-gray-200'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset`}
             onClick={() => onSelectFile(file.path)}
             onKeyDown={(e) => e.key === 'Enter' && onSelectFile(file.path)}
             role="button"
             tabIndex={0}
           >
-            <span className="file-icon">{file.is_executable ? '⚡' : '📄'}</span>
-            <span className="file-path">{file.path}</span>
+            <span className="mr-2">{file.is_executable ? '⚡' : '📄'}</span>
+            <span className="text-sm break-all">{file.path}</span>
           </li>
         ))}
       </ul>
@@ -92,18 +97,24 @@ function SkillMetadata({
   };
 }) {
   return (
-    <div className="skill-metadata">
-      <h2>{skill.name}</h2>
-      <span className={`skill-status ${skill.active ? 'active' : 'inactive'}`}>
-        {skill.active ? 'Active' : 'Inactive'}
-      </span>
-      {skill.description && <p className="description">{skill.description}</p>}
+    <div className="mb-6">
+      <div className="flex items-center gap-4 mb-3">
+        <h2 className="text-2xl font-semibold text-gray-900 m-0">{skill.name}</h2>
+        <span className={`text-xs px-2 py-1 rounded font-medium ${
+          skill.active 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {skill.active ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+      {skill.description && <p className="text-gray-600 my-3">{skill.description}</p>}
       {skill.version.changelog && (
-        <div className="changelog">
-          <strong>Changelog:</strong> {skill.version.changelog}
+        <div className="bg-gray-50 px-3 py-3 rounded my-3 text-sm">
+          <strong className="block mb-1">Changelog:</strong> {skill.version.changelog}
         </div>
       )}
-      <div className="version-info">
+      <div className="text-sm text-gray-500">
         <span>Created: {new Date(skill.version.created_at).toLocaleString()}</span>
       </div>
     </div>
@@ -125,7 +136,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
 
   if (loading) {
     return (
-      <div className="skill-detail-loading">
+      <div className="text-center py-12">
         <p>Loading skill...</p>
       </div>
     );
@@ -133,16 +144,24 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
 
   if (error || !skill) {
     return (
-      <div className="skill-detail-error">
+      <div className="text-center py-12">
         <p>Error: {error || 'Skill not found'}</p>
-        <button onClick={onBack}>Back to list</button>
+        <button 
+          onClick={onBack}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
+        >
+          Back to list
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="skill-detail">
-      <button className="back-button" onClick={onBack}>
+    <div className="p-4 max-w-6xl mx-auto">
+      <button 
+        className="bg-none border-none text-blue-600 cursor-pointer text-base py-2 px-0 mb-4 hover:underline"
+        onClick={onBack}
+      >
         ← Back to Skills
       </button>
 
@@ -153,7 +172,8 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
         onVersionChange={setVersion}
       />
 
-      <div className="skill-content">
+      <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-4 min-h-96">
+        {/* On mobile, file list will be above file viewer */}
         <FileList
           files={skill.files}
           selectedPath={selectedFile}
@@ -164,7 +184,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
           {selectedFile ? (
             <FileViewer file={file} loading={fileLoading} error={fileError} />
           ) : (
-            <div className="no-file-selected">
+            <div className="flex items-center justify-center min-h-48 text-gray-500 bg-gray-50 rounded-lg">
               <p>Select a file to view its content</p>
             </div>
           )}

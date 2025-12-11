@@ -51,7 +51,7 @@ function getLanguageClass(file: SkillFile): string {
 export function FileViewer({ file, loading, error }: FileViewerProps) {
   if (loading) {
     return (
-      <div className="file-viewer loading">
+      <div className="bg-white border border-gray-200 rounded-lg flex items-center justify-center min-h-48 text-gray-600">
         <p>Loading file...</p>
       </div>
     );
@@ -59,7 +59,7 @@ export function FileViewer({ file, loading, error }: FileViewerProps) {
 
   if (error) {
     return (
-      <div className="file-viewer error">
+      <div className="bg-white border border-gray-200 rounded-lg flex items-center justify-center min-h-48 text-gray-600">
         <p>Error loading file: {error}</p>
       </div>
     );
@@ -72,27 +72,32 @@ export function FileViewer({ file, loading, error }: FileViewerProps) {
   const languageClass = getLanguageClass(file);
 
   return (
-    <div className="file-viewer">
-      <div className="file-header">
-        <span className="file-path">{file.path}</span>
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <span className="font-medium flex-1">{file.path}</span>
         {file.is_executable && (
-          <span className="executable-badge" title="Executable">
+          <span 
+            className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800"
+            title="Executable"
+          >
             ⚡ Executable
           </span>
         )}
         {file.script_language && (
-          <span className="language-badge">{file.script_language}</span>
+          <span className="text-xs px-2 py-1 rounded bg-gray-200">
+            {file.script_language}
+          </span>
         )}
       </div>
 
       {file.run_instructions_for_ai && (
-        <div className="run-instructions">
-          <strong>AI Instructions:</strong>
-          <p>{file.run_instructions_for_ai}</p>
+        <div className="px-4 py-3 bg-blue-50 border-b border-blue-200 text-sm">
+          <strong className="block mb-1">AI Instructions:</strong>
+          <p className="m-0">{file.run_instructions_for_ai}</p>
         </div>
       )}
 
-      <pre className={`file-content ${languageClass}`}>
+      <pre className={`m-0 p-4 overflow-x-auto font-mono text-sm leading-6 bg-gray-50 ${languageClass}`}>
         <code>{file.content}</code>
       </pre>
     </div>
