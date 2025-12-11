@@ -5,6 +5,7 @@ A centralized HTTP MCP service for managing AI skills. Enables AI agents to crea
 ## Tech Stack
 
 - [**React 19**](https://react.dev/) - UI for viewing and managing skills
+- [**Tailwind CSS v4**](https://tailwindcss.com/) - Utility-first CSS framework
 - [**Vite 6**](https://vite.dev/) - Build tooling and development server
 - [**Hono**](https://hono.dev/) - Backend framework for API and MCP routes
 - [**Cloudflare Workers**](https://developers.cloudflare.com/workers/) - Edge computing platform
@@ -13,10 +14,11 @@ A centralized HTTP MCP service for managing AI skills. Enables AI agents to crea
 ## Features
 
 - 🤖 MCP (Model Context Protocol) server for AI agent integration
-- � SkSill versioning with file management
+- 📦 **ZIP Upload** - Upload multiple skills at once via web UI
+- 📝 Skill versioning with file management
 - 🌐 REST API for programmatic access
 - 💻 Web UI for browsing and viewing skills
-- � API -key authentication for write operations
+- 🔐 API key authentication for write operations
 - ⚡ Deployed on Cloudflare's global edge network
 
 ## Getting Started
@@ -63,6 +65,8 @@ bun run dev
 ```
 
 Access the Web UI at [http://localhost:5173](http://localhost:5173)
+
+**Default API Key:** `asdf1234` (for local development)
 
 ### Production
 
@@ -211,6 +215,67 @@ curl -X POST https://your-worker.workers.dev/mcp \
   }'
 ```
 
+## ZIP Upload Feature
+
+Upload multiple skills at once using ZIP files through the web UI.
+
+### ZIP Structure
+
+Each root-level folder in the ZIP represents a skill:
+
+```
+skills.zip
+├── my-first-skill/
+│   ├── SKILL.md          # Required: skill documentation
+│   ├── main.py           # Executable files auto-detected
+│   └── utils.js
+├── another-skill/
+│   ├── SKILL.md
+│   ├── README.md
+│   └── scripts/
+│       └── setup.sh
+└── data-processor/
+    ├── SKILL.md
+    └── processor.py
+```
+
+### Upload Process
+
+1. **Parse**: Upload ZIP → System extracts and validates skills → Preview with validation status
+2. **Select**: Choose which skills to import (invalid skills are disabled)
+3. **Import**: Selected skills are created/updated in the database
+
+### Validation Rules
+
+- ZIP file max size: **10MB**
+- Each skill folder must contain **SKILL.md**
+- Max **50 files** per skill
+- Max **200KB** per file
+- Executable files (`.py`, `.sh`, `.js`, `.ts`) are auto-detected
+- Binary files are skipped with warnings
+
+### API Usage
+
+```bash
+# Step 1: Parse ZIP
+curl -X POST https://your-worker.workers.dev/api/skills/upload/parse \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "file=@skills.zip"
+
+# Response: { session_id, skills: [{ name, valid, errors, file_count }] }
+
+# Step 2: Import selected skills
+curl -X POST https://your-worker.workers.dev/api/skills/upload/process \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "uuid-from-parse",
+    "selected_skills": ["my-first-skill", "data-processor"]
+  }'
+
+# Response: { total, successful, failed, results: [...] }
+```
+
 ## REST API
 
 ### Public Endpoints (no auth required)
@@ -228,6 +293,8 @@ curl -X POST https://your-worker.workers.dev/mcp \
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | PATCH | `/api/skills/:id` | Update skill status |
+| POST | `/api/skills/upload/parse` | Parse ZIP file and preview skills |
+| POST | `/api/skills/upload/process` | Import selected skills from ZIP |
 | POST | `/mcp` | MCP protocol endpoint |
 
 ### Query Parameters
@@ -243,18 +310,18 @@ curl -X POST https://your-worker.workers.dev/mcp \
 ```
 ├── src/
 │   ├── react-app/       # React frontend
-│   │   ├── components/  # UI components
+│   │   ├── components/  # UI components (Login, SkillUpload, etc.)
 │   │   ├── hooks/       # Custom React hooks
-│   │   ├── lib/         # API client
+│   │   ├── lib/         # API client with auth
 │   │   ├── pages/       # Page components
 │   │   └── styles/      # CSS styles
 │   ├── shared/          # Shared types
 │   └── worker/          # Cloudflare Worker backend
-│       ├── lib/         # Utilities (auth, validation, errors)
+│       ├── lib/         # Utilities (auth, validation, upload-validation)
 │       ├── repositories/# Data access layer
-│       ├── routes/      # MCP and API routes
-│       └── services/    # Business logic
-├── migrations/          # D1 database migrations
+│       ├── routes/      # MCP, API, and upload routes
+│       └── services/    # Business logic (skill, upload, session, zip-parser)
+├── migrations/          # D1 database migrations (skills + upload_sessions)
 └── wrangler.json        # Cloudflare configuration
 ```
 
