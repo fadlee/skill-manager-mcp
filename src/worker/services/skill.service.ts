@@ -20,6 +20,97 @@ import { validateCreateSkill, validateUpdateSkill } from '../lib/validation';
 import { notFound, conflict, validationError } from '../lib/errors';
 
 /**
+ * Extract description from SKILL.md file content
+ * Parses YAML frontmatter to extract the description field
+ */
+function extractDescriptionFromSkillMd(content: string): string | null {
+  if (!content || content.trim().length === 0) {
+    return null;
+  }
+
+  const lines = content.split('\n');
+  
+  // Check if file starts with YAML frontmatter
+  if (!lines[0] || lines[0].trim() !== '---') {
+    return null;
+  }
+
+  // Find the end of frontmatter
+  let frontmatterEnd = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') {
+      frontmatterEnd = i;
+      break;
+    }
+  }
+
+  if (frontmatterEnd === -1) {
+    return null;
+  }
+
+  // Parse the frontmatter content
+  const frontmatterLines = lines.slice(1, frontmatterEnd);
+  let description = '';
+  let inDescription = false;
+  let isMultilineDescription = false;
+
+  for (const line of frontmatterLines) {
+    const trimmedLine = line.trim();
+    
+    if (trimmedLine.startsWith('description:')) {
+      const descriptionValue = trimmedLine.substring('description:'.length).trim();
+      
+      if (descriptionValue === '|') {
+        // Multi-line description using YAML literal block scalar
+        isMultilineDescription = true;
+        inDescription = true;
+        continue;
+      } else if (descriptionValue.length > 0) {
+        // Single-line description
+        description = descriptionValue;
+        break;
+      } else {
+        // Description on next line
+        inDescription = true;
+        continue;
+      }
+    }
+    
+    if (inDescription) {
+      if (isMultilineDescription) {
+        // For multi-line descriptions, collect all indented lines
+        if (line.startsWith('  ') || line.startsWith('\t')) {
+          // Remove leading whitespace and add to description
+          const cleanLine = line.replace(/^[ \t]+/, '');
+          if (description.length > 0) {
+            description += ' ';
+          }
+          description += cleanLine;
+        } else if (trimmedLine.length === 0) {
+          // Empty line in multi-line description
+          continue;
+        } else {
+          // End of multi-line description
+          break;
+        }
+      } else {
+        // Single line description value
+        description = trimmedLine;
+        break;
+      }
+    }
+  }
+
+  // Clean up and limit to 1024 characters
+  description = description.trim();
+  return description.length > 0 
+    ? description.length > 1024 
+      ? description.substring(0, 1024).trim()
+      : description
+    : null;
+}
+
+/**
  * Service interface for skill operations
  */
 export interface SkillService {
@@ -53,12 +144,21 @@ export function createSkillService(repo: SkillRepository): SkillService {
         throw conflict(`Skill with name "${input.name}" already exists`);
       }
 
+      // Extract description from SKILL.md if no description provided
+      let description = input.description ?? null;
+      if (!description) {
+        const skillMdFile = input.files.find(f => f.path === 'SKILL.md');
+        if (skillMdFile) {
+          description = extractDescriptionFromSkillMd(skillMdFile.content);
+        }
+      }
+
       const now = Date.now();
 
       // Create skill (Requirement 1.4 - creator type 'ai')
       const skill = await repo.createSkill({
         name: input.name,
-        description: input.description ?? null,
+        description,
         active: true,
         created_at: now,
         updated_at: now,
@@ -130,11 +230,23 @@ export function createSkillService(repo: SkillRepository): SkillService {
 
       const now = Date.now();
 
-      // Update skill metadata if description changed
+      // Update skill metadata if description changed or extract from SKILL.md
       let updatedSkill = skill;
-      if (input.description !== undefined) {
+      let newDescription: string | null | undefined = input.description;
+      
+      // If no description provided but SKILL.md is being updated, extract description
+      if (newDescription === undefined && input.file_changes) {
+        const skillMdChange = input.file_changes.find(
+          change => change.path === 'SKILL.md' && (change.type === 'add' || change.type === 'update')
+        );
+        if (skillMdChange && skillMdChange.content) {
+          newDescription = extractDescriptionFromSkillMd(skillMdChange.content);
+        }
+      }
+      
+      if (newDescription !== undefined) {
         updatedSkill = (await repo.updateSkill(skill.id, {
-          description: input.description,
+          description: newDescription ?? undefined,
           updated_at: now,
         }))!;
       } else {
@@ -250,8 +362,8 @@ export function createSkillService(repo: SkillRepository): SkillService {
           // Ensure description doesn't exceed 1024 characters even in detailed response
           description:
             skill.description && skill.description.length > 1024
-            ? skill.description.substring(0, 1024)
-            : skill.description,
+              ? skill.description.substring(0, 1024)
+              : skill.description,
         }));
       }
 
@@ -261,8 +373,8 @@ export function createSkillService(repo: SkillRepository): SkillService {
         // Ensure description doesn't exceed 1024 characters
         description:
           skill.description && skill.description.length > 1024
-          ? skill.description.substring(0, 1024)
-          : skill.description,
+            ? skill.description.substring(0, 1024)
+            : skill.description,
       }));
     },
 
