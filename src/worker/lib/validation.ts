@@ -10,7 +10,7 @@ import type { CreateSkillInput, UpdateSkillInput, FileInput, FileChange } from '
  */
 export const CONSTRAINTS = {
   SKILL_NAME_MAX: 100,
-  DESCRIPTION_MAX: 1000,
+  DESCRIPTION_MAX: 1024,
   FILE_PATH_MAX: 255,
   FILE_CONTENT_MAX: 200 * 1024, // 200KB
   FILES_PER_VERSION_MAX: 50,

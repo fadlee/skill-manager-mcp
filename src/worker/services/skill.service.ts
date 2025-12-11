@@ -12,6 +12,8 @@ import type {
   CreateSkillInput,
   UpdateSkillInput,
   ListSkillsOptions,
+  MinimalSkillResponse,
+  ExtendedListSkillsOptions,
 } from '../../shared/types';
 import type { SkillRepository } from '../repositories/skill.repo';
 import { validateCreateSkill, validateUpdateSkill } from '../lib/validation';
@@ -23,7 +25,7 @@ import { notFound, conflict, validationError } from '../lib/errors';
 export interface SkillService {
   createSkill(input: CreateSkillInput): Promise<SkillDetail>;
   updateSkill(input: UpdateSkillInput): Promise<SkillDetail>;
-  listSkills(options: ListSkillsOptions): Promise<SkillWithVersion[]>;
+  listSkills(options: ExtendedListSkillsOptions): Promise<SkillWithVersion[] | MinimalSkillResponse[]>;
   getSkill(skillId: string, version?: number): Promise<SkillDetail>;
   getFile(skillId: string, path: string, version?: number): Promise<SkillFile>;
   updateStatus(skillId: string, active: boolean): Promise<Skill>;
@@ -229,8 +231,37 @@ export function createSkillService(repo: SkillRepository): SkillService {
      * List skills with filtering and pagination
      * Requirements: 3.1, 3.2, 3.3, 3.4
      */
-    async listSkills(options: ListSkillsOptions): Promise<SkillWithVersion[]> {
-      return repo.listSkills(options);
+    async listSkills(options: ExtendedListSkillsOptions): Promise<SkillWithVersion[] | MinimalSkillResponse[]> {
+      // Convert new parameters to existing options format
+      const repoOptions: ListSkillsOptions = {
+        // Default to active only unless showInactive is true
+        activeOnly: options.showInactive !== true,
+        limit: options.limit,
+        offset: options.offset,
+        query: options.query,
+      };
+
+      const skills = await repo.listSkills(repoOptions);
+
+      // Return detailed format if requested
+      if (options.detailed === true) {
+        return skills.map(skill => ({
+          ...skill,
+          // Ensure description doesn't exceed 1024 characters even in detailed response
+          description: skill.description && skill.description.length > 1024 
+            ? skill.description.substring(0, 1024)
+            : skill.description,
+        }));
+      }
+
+      // Return minimal format by default
+      return skills.map(skill => ({
+        name: skill.name,
+        // Ensure description doesn't exceed 1024 characters
+        description: skill.description && skill.description.length > 1024 
+          ? skill.description.substring(0, 1024)
+          : skill.description,
+      }));
     },
 
     /**

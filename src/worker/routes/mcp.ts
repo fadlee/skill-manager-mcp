@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import type { SkillService } from '../services/skill.service';
-import type { CreateSkillInput, UpdateSkillInput, ListSkillsOptions } from '../../shared/types';
+import type { CreateSkillInput, UpdateSkillInput, ExtendedListSkillsOptions } from '../../shared/types';
 import { isAppError } from '../lib/errors';
 
 /**
@@ -99,11 +99,12 @@ const TOOL_DEFINITIONS = [
   },
   {
     name: 'skill_list',
-    description: 'List skills (defaults to active skills only)',
+    description: 'List skills (minimal format by default, active skills only)',
     inputSchema: {
       type: 'object',
       properties: {
-        active_only: { type: 'boolean', description: 'Filter by active status (default: true). Set to false to include inactive skills' },
+        detailed: { type: 'boolean', description: 'Return detailed response with all fields (default: false)' },
+        show_inactive: { type: 'boolean', description: 'Include inactive skills (default: false)' },
         limit: { type: 'number', description: 'Maximum number of results' },
         offset: { type: 'number', description: 'Number of results to skip' },
         query: { type: 'string', description: 'Search query for skill name' },
@@ -350,24 +351,28 @@ async function handleSkillList(
   args: Record<string, unknown>,
   service: SkillService
 ): Promise<ToolResult> {
-  const options: ListSkillsOptions = {
-    // Default to active_only: true unless explicitly set to false
-    activeOnly: args.active_only !== false ? true : false,
+  // Validate boolean parameters
+  if (args.detailed !== undefined && typeof args.detailed !== 'boolean') {
+    return errorResult('Parameter "detailed" must be a boolean');
+  }
+  
+  if (args.show_inactive !== undefined && typeof args.show_inactive !== 'boolean') {
+    return errorResult('Parameter "show_inactive" must be a boolean');
+  }
+
+  const options: ExtendedListSkillsOptions = {
+    detailed: args.detailed as boolean | undefined,
+    showInactive: args.show_inactive as boolean | undefined,
     limit: args.limit as number | undefined,
     offset: args.offset as number | undefined,
     query: args.query as string | undefined,
   };
 
   const skills = await service.listSkills(options);
+  
   return successResult({
     count: skills.length,
-    skills: skills.map(s => ({
-      id: s.id,
-      name: s.name,
-      description: s.description,
-      active: s.active,
-      latest_version: s.latest_version,
-    })),
+    skills: skills,
   });
 }
 

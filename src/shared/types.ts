@@ -150,3 +150,19 @@ export interface ListSkillsOptions {
   offset?: number;
   query?: string;
 }
+
+/**
+ * Minimal skill response for token optimization
+ */
+export interface MinimalSkillResponse {
+  name: string;
+  description: string | null;
+}
+
+/**
+ * Extended list options with response format control
+ */
+export interface ExtendedListSkillsOptions extends ListSkillsOptions {
+  detailed?: boolean;
+  showInactive?: boolean;
+}
