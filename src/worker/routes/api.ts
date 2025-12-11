@@ -140,5 +140,28 @@ export function createAPIRoutes(service: SkillService) {
     return c.json({ ok: true, data: skill });
   });
 
+  /**
+   * PUT /api/skills/:id - Update skill (create new version)
+   * Requirement: 2.1, 2.2, 2.3, 2.4, 2.5
+   */
+  app.put('/skills/:id', async (c) => {
+    const skillId = c.req.param('id');
+    const body = await c.req.json<{
+      description?: string;
+      file_changes?: any[];
+      changelog?: string;
+    }>();
+
+    // The service expects UpdateSkillInput which includes skill_id
+    const skill = await service.updateSkill({
+      skill_id: skillId,
+      description: body.description,
+      file_changes: body.file_changes,
+      changelog: body.changelog,
+    });
+
+    return c.json({ ok: true, data: skill });
+  });
+
   return app;
 }

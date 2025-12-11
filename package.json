@@ -12,6 +12,7 @@
 		"publish": true
 	},
 	"dependencies": {
+		"@monaco-editor/react": "^4.7.0",
 		"fflate": "^0.8.2",
 		"hono": "4.10.7",
 		"react": "19.2.1",

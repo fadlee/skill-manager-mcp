@@ -21,7 +21,7 @@ interface UseSkillStatusToggleReturn {
 export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
   const [isToggling, setIsToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Refs for debouncing and cleanup
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -57,9 +57,10 @@ export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
         setIsToggling(true);
         setError(null);
 
+        const newStatus = !currentStatus;
+
         try {
-          const newStatus = !currentStatus;
-          
+
           // Make API call with timeout protection
           const timeoutPromise = new Promise<never>((_, timeoutReject) => {
             setTimeout(() => {
@@ -83,7 +84,7 @@ export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
           // Don't set error if request was cancelled
           if (!abortController.signal.aborted) {
             let errorMessage = 'Failed to update skill status';
-            
+
             if (err instanceof Error) {
               if (err.message.includes('timeout')) {
                 errorMessage = 'Request timed out. Please try again.';
@@ -103,7 +104,7 @@ export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
                 errorMessage = err.message;
               }
             }
-            
+
             // Log error for debugging (only in development)
             if (process.env.NODE_ENV === 'development') {
               console.error('Skill status toggle error:', {
@@ -114,7 +115,7 @@ export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
                 timestamp: new Date().toISOString()
               });
             }
-            
+
             setError(errorMessage);
             reject(err);
           } else {
@@ -125,7 +126,7 @@ export function useSkillStatusToggle(): UseSkillStatusToggleReturn {
           if (!abortController.signal.aborted) {
             setIsToggling(false);
           }
-          
+
           // Clean up this controller reference if it's still the current one
           if (abortControllerRef.current === abortController) {
             abortControllerRef.current = null;
@@ -155,7 +156,7 @@ export function useSkillStatusToggleWithOptimisticUpdate(
 
   const toggleStatus = useCallback(async (skillId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
-    
+
     // Optimistic update
     onSkillUpdate(skillId, { active: newStatus });
 

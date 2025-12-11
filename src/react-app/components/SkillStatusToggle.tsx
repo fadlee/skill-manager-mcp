@@ -17,7 +17,6 @@ export interface SkillStatusToggleProps {
  * Reusable toggle component for skill active/inactive status
  */
 export function SkillStatusToggle({
-  skillId, // eslint-disable-line @typescript-eslint/no-unused-vars
   currentStatus,
   onStatusChange,
   disabled = false,
@@ -37,7 +36,7 @@ export function SkillStatusToggle({
     if (disabled || isToggling) return;
 
     const newStatus = !optimisticStatus;
-    
+
     // Optimistic update
     setOptimisticStatus(newStatus);
     setIsToggling(true);
@@ -104,8 +103,8 @@ export function SkillStatusToggle({
             relative inline-flex items-center ${classes.container} rounded-full transition-all duration-300 ease-in-out
             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${optimisticStatus 
-              ? 'bg-green-500 hover:bg-green-600 shadow-lg' 
+            ${optimisticStatus
+              ? 'bg-green-500 hover:bg-green-600 shadow-lg'
               : 'bg-gray-300 hover:bg-gray-400'
             }
             ${disabled || isToggling ? 'cursor-not-allowed' : 'cursor-pointer'}

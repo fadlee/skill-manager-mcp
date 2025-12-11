@@ -113,7 +113,7 @@ app.get('/api/skills/:id/versions/:version/files/*', async (c) => {
   const service = c.get('service');
   const skillId = c.req.param('id');
   const version = parseInt(c.req.param('version'), 10);
-  
+
   const url = new URL(c.req.url);
   const pathMatch = url.pathname.match(/\/files\/(.+)$/);
   const filePath = pathMatch ? pathMatch[1] : '';
@@ -146,6 +146,27 @@ app.patch('/api/skills/:id', authMiddleware(), async (c) => {
   return c.json({ ok: true, data: skill });
 });
 
+// PUT /api/skills/:id - Update skill (create new version)
+app.put('/api/skills/:id', authMiddleware(), async (c) => {
+  const service = c.get('service');
+  const skillId = c.req.param('id');
+  const body = await c.req.json<{
+    description?: string;
+    file_changes?: any[];
+    changelog?: string;
+  }>();
+
+  // The service expects UpdateSkillInput which includes skill_id
+  const skill = await service.updateSkill({
+    skill_id: skillId,
+    description: body.description,
+    file_changes: body.file_changes,
+    changelog: body.changelog,
+  });
+
+  return c.json({ ok: true, data: skill });
+});
+
 // ============================================================================
 // Upload Routes (requires auth)
 // ============================================================================
@@ -171,10 +192,10 @@ app.post('/api/skills/upload/*', authMiddleware(), async (c) => {
 
 app.post('/mcp', async (c) => {
   const service = c.get('service');
-  
+
   // Create a sub-app for MCP and delegate
   const mcpApp = createMCPRoutes(service);
-  
+
   // Forward the request to MCP handler
   return mcpApp.fetch(c.req.raw, c.env, c.executionCtx);
 });

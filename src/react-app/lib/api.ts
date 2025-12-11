@@ -8,6 +8,7 @@ import type {
   SkillDetail,
   SkillFile,
   SkillVersion,
+  UpdateSkillInput,
   APIResponse,
   APIError,
 } from '../../shared/types';
@@ -158,6 +159,19 @@ export async function updateSkillStatus(
   return apiFetch<SkillWithVersion>(`/skills/${skillId}`, {
     method: 'PATCH',
     body: JSON.stringify({ active }),
+  });
+}
+
+/**
+ * Update skill details (create new version)
+ */
+export async function updateSkill(
+  skillId: string,
+  updates: Omit<UpdateSkillInput, 'skill_id'>
+): Promise<SkillDetail> {
+  return apiFetch<SkillDetail>(`/skills/${skillId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
   });
 }
 

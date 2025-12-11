@@ -9,6 +9,7 @@ interface FileViewerProps {
   file: SkillFile | null;
   loading: boolean;
   error: string | null;
+  onEdit?: () => void;
 }
 
 /**
@@ -48,7 +49,7 @@ function getLanguageClass(file: SkillFile): string {
 /**
  * File Viewer Component
  */
-export function FileViewer({ file, loading, error }: FileViewerProps) {
+export function FileViewer({ file, loading, error, onEdit }: FileViewerProps) {
   if (loading) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg flex items-center justify-center min-h-48 text-gray-600">
@@ -76,7 +77,7 @@ export function FileViewer({ file, loading, error }: FileViewerProps) {
       <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200">
         <span className="font-medium flex-1">{file.path}</span>
         {file.is_executable && (
-          <span 
+          <span
             className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800"
             title="Executable"
           >
@@ -87,6 +88,14 @@ export function FileViewer({ file, loading, error }: FileViewerProps) {
           <span className="text-xs px-2 py-1 rounded bg-gray-200">
             {file.script_language}
           </span>
+        )}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100 cursor-pointer text-gray-700"
+          >
+            Edit
+          </button>
         )}
       </div>
 

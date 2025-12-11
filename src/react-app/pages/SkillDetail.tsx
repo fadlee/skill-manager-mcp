@@ -7,7 +7,9 @@ import { useState, useCallback } from 'react';
 import { useSkill, useSkillFile } from '../hooks/useSkill';
 import { useSkillStatusToggle } from '../hooks/useSkillStatusToggle';
 import { FileViewer } from '../components/FileViewer';
+import { FileEditor } from '../components/FileEditor';
 import { SkillStatusToggle } from '../components/SkillStatusToggle';
+import { updateSkill as apiUpdateSkill } from '../lib/api';
 
 interface SkillDetailProps {
   skillId: string;
@@ -65,11 +67,10 @@ function FileList({
         {files.map((file) => (
           <li
             key={file.path}
-            className={`flex items-center p-2 rounded cursor-pointer transition-colors ${
-              selectedPath === file.path 
-                ? 'bg-blue-600 text-white' 
-                : 'hover:bg-gray-200'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset`}
+            className={`flex items-center p-2 rounded cursor-pointer transition-colors ${selectedPath === file.path
+              ? 'bg-blue-600 text-white'
+              : 'hover:bg-gray-200'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset`}
             onClick={() => onSelectFile(file.path)}
             onKeyDown={(e) => e.key === 'Enter' && onSelectFile(file.path)}
             role="button"
@@ -131,6 +132,7 @@ function SkillMetadata({
 export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
   const { skill, loading, error, setVersion, updateSkill } = useSkill(skillId);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const { toggleStatus } = useSkillStatusToggle();
 
   const { file, loading: fileLoading, error: fileError } = useSkillFile(
@@ -141,10 +143,10 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
 
   const handleStatusChange = useCallback(async (newStatus: boolean) => {
     if (!skill) return;
-    
+
     // Optimistic update
     updateSkill({ active: newStatus });
-    
+
     try {
       await toggleStatus(skillId, skill.active);
       // Success - optimistic update was correct
@@ -154,6 +156,42 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
       throw err; // Re-throw to let SkillStatusToggle handle error display
     }
   }, [skill, updateSkill, toggleStatus, skillId]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const handleSave = async (content: string) => {
+    if (!skill || !selectedFile) return;
+
+    try {
+      const newSkill = await apiUpdateSkill(skill.id, {
+        description: skill.description || undefined,
+        file_changes: [
+          {
+            type: 'update',
+            path: selectedFile,
+            content: content,
+          },
+        ],
+        changelog: `Updated ${selectedFile}`,
+      });
+
+      // Update local state to new skill
+      updateSkill(newSkill);
+      // Switch to new version
+      setVersion(newSkill.version.version_number);
+      // Exit edit mode
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to save', err);
+      alert('Failed to save changes: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
   if (loading) {
     return (
@@ -167,7 +205,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
     return (
       <div className="text-center py-12">
         <p>Error: {error || 'Skill not found'}</p>
-        <button 
+        <button
           onClick={onBack}
           className="mt-4 px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700"
         >
@@ -179,7 +217,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <button 
+      <button
         className="bg-none border-none text-blue-600 cursor-pointer text-base py-2 px-0 mb-4 hover:underline"
         onClick={onBack}
       >
@@ -198,12 +236,30 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
         <FileList
           files={skill.files}
           selectedPath={selectedFile}
-          onSelectFile={setSelectedFile}
+          onSelectFile={(path) => {
+            if (path !== selectedFile) {
+              setSelectedFile(path);
+              setIsEditing(false); // Exit edit mode when switching files
+            }
+          }}
         />
 
-        <div className="file-viewer-container">
+        <div className="file-viewer-container min-w-0">
           {selectedFile ? (
-            <FileViewer file={file} loading={fileLoading} error={fileError} />
+            isEditing && file ? (
+              <FileEditor
+                file={file}
+                onSave={handleSave}
+                onCancel={handleCancel}
+              />
+            ) : (
+              <FileViewer
+                file={file}
+                loading={fileLoading}
+                error={fileError}
+                onEdit={handleEdit}
+              />
+            )
           ) : (
             <div className="flex items-center justify-center min-h-48 text-gray-500 bg-gray-50 rounded-lg">
               <p>Select a file to view its content</p>
