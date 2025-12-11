@@ -170,7 +170,7 @@ export function SkillDetail({ skillId, onBack }: SkillDetailProps) {
 
     try {
       const newSkill = await apiUpdateSkill(skill.id, {
-        description: skill.description || undefined,
+        description: selectedFile === 'SKILL.md' ? undefined : (skill.description || undefined),
         file_changes: [
           {
             type: 'update',

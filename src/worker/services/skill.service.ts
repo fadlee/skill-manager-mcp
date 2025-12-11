@@ -20,19 +20,19 @@ import { validateCreateSkill, validateUpdateSkill } from '../lib/validation';
 import { notFound, conflict, validationError } from '../lib/errors';
 
 /**
- * Extract description from SKILL.md file content
- * Parses YAML frontmatter to extract the description field
+ * Parse metadata from SKILL.md file content
+ * Extracts name and description from YAML frontmatter
  */
-function extractDescriptionFromSkillMd(content: string): string | null {
+function parseSkillMetadata(content: string): { name?: string; description?: string } {
   if (!content || content.trim().length === 0) {
-    return null;
+    return {};
   }
 
   const lines = content.split('\n');
-  
+
   // Check if file starts with YAML frontmatter
   if (!lines[0] || lines[0].trim() !== '---') {
-    return null;
+    return {};
   }
 
   // Find the end of frontmatter
@@ -45,21 +45,30 @@ function extractDescriptionFromSkillMd(content: string): string | null {
   }
 
   if (frontmatterEnd === -1) {
-    return null;
+    return {};
   }
 
   // Parse the frontmatter content
   const frontmatterLines = lines.slice(1, frontmatterEnd);
   let description = '';
+  let name = '';
   let inDescription = false;
   let isMultilineDescription = false;
 
   for (const line of frontmatterLines) {
     const trimmedLine = line.trim();
-    
+
+    // Parse Name
+    if (trimmedLine.startsWith('name:')) {
+      name = trimmedLine.substring('name:'.length).trim();
+      inDescription = false; // Reset description parsing state
+      continue;
+    }
+
+    // Parse Description
     if (trimmedLine.startsWith('description:')) {
       const descriptionValue = trimmedLine.substring('description:'.length).trim();
-      
+
       if (descriptionValue === '|') {
         // Multi-line description using YAML literal block scalar
         isMultilineDescription = true;
@@ -68,6 +77,7 @@ function extractDescriptionFromSkillMd(content: string): string | null {
       } else if (descriptionValue.length > 0) {
         // Single-line description
         description = descriptionValue;
+        inDescription = false;
         break;
       } else {
         // Description on next line
@@ -75,7 +85,7 @@ function extractDescriptionFromSkillMd(content: string): string | null {
         continue;
       }
     }
-    
+
     if (inDescription) {
       if (isMultilineDescription) {
         // For multi-line descriptions, collect all indented lines
@@ -83,11 +93,12 @@ function extractDescriptionFromSkillMd(content: string): string | null {
           // Remove leading whitespace and add to description
           const cleanLine = line.replace(/^[ \t]+/, '');
           if (description.length > 0) {
-            description += ' ';
+            description += '\n';
           }
           description += cleanLine;
         } else if (trimmedLine.length === 0) {
-          // Empty line in multi-line description
+          // Empty line in multi-line description - preserve as newline
+          description += '\n';
           continue;
         } else {
           // End of multi-line description
@@ -101,13 +112,21 @@ function extractDescriptionFromSkillMd(content: string): string | null {
     }
   }
 
+  const result: { name?: string; description?: string } = {};
+
+  if (name.length > 0) {
+    result.name = name;
+  }
+
   // Clean up and limit to 1024 characters
   description = description.trim();
-  return description.length > 0 
-    ? description.length > 1024 
+  if (description.length > 0) {
+    result.description = description.length > 1024
       ? description.substring(0, 1024).trim()
-      : description
-    : null;
+      : description;
+  }
+
+  return result;
 }
 
 /**
@@ -149,7 +168,10 @@ export function createSkillService(repo: SkillRepository): SkillService {
       if (!description) {
         const skillMdFile = input.files.find(f => f.path === 'SKILL.md');
         if (skillMdFile) {
-          description = extractDescriptionFromSkillMd(skillMdFile.content);
+          const metadata = parseSkillMetadata(skillMdFile.content);
+          if (metadata.description) {
+            description = metadata.description;
+          }
         }
       }
 
@@ -216,7 +238,7 @@ export function createSkillService(repo: SkillRepository): SkillService {
       // Get current version to determine file count for validation
       const currentVersionNumber = await repo.getLatestVersionNumber(skill.id);
       const currentVersion = await repo.findVersion(skill.id, currentVersionNumber);
-      
+
       let currentFiles: SkillFile[] = [];
       if (currentVersion) {
         currentFiles = await repo.findFilesByVersionId(currentVersion.id);
@@ -232,23 +254,36 @@ export function createSkillService(repo: SkillRepository): SkillService {
 
       // Update skill metadata if description changed or extract from SKILL.md
       let updatedSkill = skill;
-      let newDescription: string | null | undefined = input.description;
-      
-      // If no description provided but SKILL.md is being updated, extract description
-      if (newDescription === undefined && input.file_changes) {
+      const updates: any = { updated_at: now };
+      let hasUpdates = false;
+
+      if (input.description !== undefined) {
+        updates.description = input.description;
+        hasUpdates = true;
+      }
+
+      // If SKILL.md is being updated, extract metadata
+      if (input.file_changes) {
         const skillMdChange = input.file_changes.find(
           change => change.path === 'SKILL.md' && (change.type === 'add' || change.type === 'update')
         );
         if (skillMdChange && skillMdChange.content) {
-          newDescription = extractDescriptionFromSkillMd(skillMdChange.content);
+          const metadata = parseSkillMetadata(skillMdChange.content);
+
+          if (metadata.name && metadata.name !== skill.name) {
+            updates.name = metadata.name;
+            hasUpdates = true;
+          }
+
+          if (metadata.description && input.description === undefined) {
+            updates.description = metadata.description;
+            hasUpdates = true;
+          }
         }
       }
-      
-      if (newDescription !== undefined) {
-        updatedSkill = (await repo.updateSkill(skill.id, {
-          description: newDescription ?? undefined,
-          updated_at: now,
-        }))!;
+
+      if (hasUpdates) {
+        updatedSkill = (await repo.updateSkill(skill.id, updates))!;
       } else {
         updatedSkill = (await repo.updateSkill(skill.id, {
           updated_at: now,
